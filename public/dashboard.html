@@ -8,8 +8,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-
 <style>
 /* ══ RESET ══ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -487,6 +487,11 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
             </div>
             <div class="fd s2"><label>What problem does your product solve? (Be specific)</label>
               <textarea id="problem" placeholder="e.g. Hospital procurement teams spend 3+ hours daily on manual vendor coordination with no digital audit trail. Our platform automates this with real-time tracking…" oninput="onCtxChange()"></textarea>
+              <div style="display:flex;justify-content:space-between;margin-top:4px;">
+  <span id="probHint" style="font-size:11px;color:#9BAABB;">Be specific — min 20 characters</span>
+  <span id="probCounter" style="font-size:11px;font-weight:600;color:#9BAABB;">0 / 20</span>
+</div>
+
             </div>
             <div class="fd s2"><label>Stage of Business</label>
               <div class="pills" id="stagePills">
@@ -628,7 +633,7 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
     </button>
 
     <!-- Export -->
-    <button class="sb-btn" onclick="window.print()" title="Export PDF"
+    <button class="sb-btn" onclick="(function(){if(window.parent&&window.parent!==window){window.parent.postMessage({type:'INFOPACE_EXPORT_PDF'},'*');}else{window.print();}})()"  title="Export PDF"
       style="height:40px;border:none;background:transparent;cursor:pointer;display:flex;flex-direction:row;align-items:center;margin:0 8px 4px;opacity:0.7;">
       <span class="sb-icon">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -802,12 +807,129 @@ function goTo(s){
   document.getElementById('nextBtn').className=s===8?'btn btn-go':'btn btn-primary';
   document.getElementById('slbl').textContent=`Step ${s+1} of 9`;
   document.getElementById('progBar').style.width=((s+1)/9*100)+'%';
+  // Update button state based on current section completion
+  calcLive();
+}
+
+function getUnansweredQuestionsInSection(secNum){
+  const unanswered=[];
+  const secEl=document.getElementById('q'+secNum);
+  if(!secEl)return unanswered;
+
+  // Check select dropdowns
+  secEl.querySelectorAll('.ai-sel').forEach(el=>{
+    if(!el.value||el.value===''){
+      const label=el.closest('.fd')?.querySelector('label')?.textContent||`Question`;
+      unanswered.push(label.replace('*','').trim());
+    }
+  });
+  // Check pill selections
+  secEl.querySelectorAll('.ai-pills').forEach(grp=>{
+    if(!grp.querySelector('.pill.on')){
+      const label=grp.closest('.fd')?.querySelector('label')?.textContent||`Question`;
+      unanswered.push(label.replace('*','').trim());
+    }
+  });
+  // Check required text inputs
+  secEl.querySelectorAll('.ai-txt').forEach(el=>{
+    if(!el.value||el.value.trim()===''){
+      const label=el.closest('.fd')?.querySelector('label')?.textContent||`Question`;
+      unanswered.push(label.replace('*','').trim());
+    }
+  });
+  // Check checkbox groups
+  secEl.querySelectorAll('.ckg').forEach(ckg=>{
+    if(!ckg.querySelector('.ai-chk:checked')){
+      const label=ckg.closest('.fd')?.querySelector('label')?.textContent||`Question`;
+      unanswered.push(label.replace('*','').trim());
+    }
+  });
+  return unanswered;
+}
+
+function getUnansweredQuestions(){
+  const all=[];
+  for(let sec=1;sec<=8;sec++){
+    all.push(...getUnansweredQuestionsInSection(sec));
+  }
+  return all;
+}
+
+function showSectionError(secNum,unanswered){
+  // Remove any existing error
+  const existing=document.getElementById('sectionError');
+  if(existing)existing.remove();
+
+  const secNames=['About Your Product','Market Size & TAM','Buyer Quality & WTP','Competitive Landscape','Revenue & Unit Economics','Risk & Market Timing','Go-to-Market','Output & PMF','Deep-Dive'];
+  const secName=secNames[secNum]||`Section ${secNum}`;
+
+  const errorDiv=document.createElement('div');
+  errorDiv.id='sectionError';
+  errorDiv.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#E00D00;color:#fff;padding:12px 20px;border-radius:6px;box-shadow:0 4px 12px rgba(224,13,0,.3);z-index:10000;font-family:"IBM Plex Sans",sans-serif;font-size:13px;display:flex;align-items:center;gap:10px;max-width:90%;';
+  errorDiv.innerHTML=`<span>⚠️</span><span><strong>Complete ${secName}</strong> — ${unanswered.length} question(s) remaining</span><button onclick="document.getElementById('sectionError').remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;margin-left:8px;font-size:16px;line-height:1;">×</button>`;
+  document.body.appendChild(errorDiv);
+
+  // Auto-hide after 4 seconds
+  setTimeout(()=>{const el=document.getElementById('sectionError');if(el)el.remove();},4000);
+}
+
+function showValidationError(unanswered){
+  const errorDiv=document.createElement('div');
+  errorDiv.id='validationError';
+  errorDiv.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:2px solid #E00D00;border-radius:8px;padding:24px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3);z-index:10000;font-family:"IBM Plex Sans",sans-serif;';
+  const listItems=unanswered.slice(0,5).map(q=>`<li style="margin:6px 0;color:#08152A;font-size:13px;">${q}</li>`).join('');
+  const moreText=unanswered.length>5?`<p style="margin-top:10px;color:#627289;font-size:12px;">...and ${unanswered.length-5} more</p>`:'';
+  errorDiv.innerHTML=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;"><span style="font-size:24px;">⚠️</span><h3 style="margin:0;color:#E00D00;font-size:18px;">Please Answer All Questions</h3></div><p style="color:#627289;margin-bottom:12px;font-size:14px;">The following required questions need answers:</p><ul style="margin:0;padding-left:20px;">${listItems}</ul>${moreText}<button onclick="document.getElementById('validationError').remove()" style="margin-top:20px;width:100%;padding:10px;background:#00338D;color:#fff;border:none;border-radius:4px;font-size:14px;cursor:pointer;font-weight:600;">Go Back and Complete</button>`;
+  document.body.appendChild(errorDiv);
+}
+
+function validateStep0(){
+  // Step 0: About Your Product - check context fields
+  const hasSector=document.getElementById('sector')?.value;
+  const hasBizType=document.getElementById('bizType')?.value;
+  const hasGeo=document.getElementById('geo')?.value;
+  const hasProblem=document.getElementById('problem')?.value?.length>20;
+  const hasStage=document.querySelector('#stagePills .pill.on');
+  const missing=[];
+  if(!hasSector)missing.push('Industry Sector');
+  if(!hasBizType)missing.push('Business Type');
+  if(!hasGeo)missing.push('Target Geography');
+  if (!hasProblem) {
+  const currentLen = document.getElementById('problem')?.value?.length || 0;
+  missing.push(`Problem Statement — ${currentLen}/20 characters (${20 - currentLen} more needed)`);
+}
+  if(!hasStage)missing.push('Stage of Business');
+  return missing;
 }
 
 function navigate(d){
   const n=step+d;
   if(n<0)return;
-  if(n>8){buildDashboard();return;}
+
+  // Trying to go forward - validate current section first
+  if(d>0&&n<=8){
+    let missing=[];
+    if(step===0){
+      missing=validateStep0();
+    }else if(step>=1&&step<=8){
+      missing=getUnansweredQuestionsInSection(step);
+    }
+    if(missing.length>0){
+      showSectionError(step,missing);
+      return;
+    }
+  }
+
+  if(n>8){
+    // Validate all questions answered before submitting
+    const unanswered=getUnansweredQuestions();
+    if(unanswered.length>0){
+      showValidationError(unanswered);
+      return;
+    }
+    buildDashboard();
+    return;
+  }
   if(step===0&&n===1&&ctxReady()){
     generateAIQuestions().then(()=>goTo(1));
   }else{
@@ -927,25 +1049,72 @@ function calcLive(){
     if(probLen<40&&overall>70)overall=70;
   }
 
+  // ── Count completion progress ──────────────────────────
+  function countQuestions(){
+    let total=0,answered=0;
+    for(let sec=1;sec<=8;sec++){
+      const secEl=document.getElementById('q'+sec);
+      if(!secEl)continue;
+      // Select dropdowns
+      secEl.querySelectorAll('.ai-sel').forEach(el=>{total++;if(el.value)answered++;});
+      // Pills
+      secEl.querySelectorAll('.ai-pills').forEach(grp=>{total++;if(grp.querySelector('.pill.on'))answered++;});
+      // Text inputs
+      secEl.querySelectorAll('.ai-txt').forEach(el=>{total++;if(el.value&&el.value.trim())answered++;});
+      // Checkboxes (per group)
+      secEl.querySelectorAll('.ckg').forEach(ckg=>{total++;if(ckg.querySelector('.ai-chk:checked'))answered++;});
+    }
+    return{total,answered};
+  }
+  const{total,answered}=countQuestions();
+  const allAnswered=total>0&&answered>=total;
+
   // ── Update UI ─────────────────────────────────────────
   const lsEl=document.getElementById('liveScore');
   const lgEl=document.getElementById('liveGrade');
   if(overall===0){
     lsEl.textContent='0';lsEl.className='big-sc sc-zero';
-    lgEl.textContent='Fill in the form';lgEl.style.color='#9BAABB';
+    const progressText=total>0?`(${answered}/${total} answered)`:'Fill in the form';
+    lgEl.textContent=progressText;lgEl.style.color='#9BAABB';
     document.getElementById('topScoreWrap').style.display='none';
     // Reset dim bars
     ['bf1','bf2','bf3','bf4','bf5','bf6'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.width='0%';});
     ['d1lbl','d2lbl','d3lbl','d4lbl','d5lbl','d6lbl'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='—';});
     return;
   }
+  // Show completion status in grade text
+  const progressSuffix=total>0?` (${answered}/${total})`:'';
   lsEl.textContent=overall;
-  if(overall>=70){lsEl.className='big-sc sc-high';lgEl.textContent='High Potential ✓';lgEl.style.color='#00A3A1';}
-  else if(overall>=45){lsEl.className='big-sc sc-mid';lgEl.textContent='Moderate Potential';lgEl.style.color='#E8A000';}
-  else{lsEl.className='big-sc sc-low';lgEl.textContent='Needs Strengthening';lgEl.style.color='#C8002D';}
+  if(overall>=70){lsEl.className='big-sc sc-high';lgEl.textContent='High Potential ✓'+progressSuffix;lgEl.style.color='#00A3A1';}
+  else if(overall>=45){lsEl.className='big-sc sc-mid';lgEl.textContent='Moderate Potential'+progressSuffix;lgEl.style.color='#E8A000';}
+  else{lsEl.className='big-sc sc-low';lgEl.textContent='Needs Strengthening'+progressSuffix;lgEl.style.color='#C8002D';}
 
   document.getElementById('topScoreWrap').style.display='flex';
   document.getElementById('topScore').textContent=overall+'/100';
+
+  // ── Update Next/Generate Dashboard button state ──────
+  const nextBtn=document.getElementById('nextBtn');
+  if(nextBtn){
+    let currentMissing=[];
+    if(step===0){
+      currentMissing=validateStep0();
+    }else if(step>=1&&step<=8){
+      currentMissing=getUnansweredQuestionsInSection(step);
+    }
+    const canProceed=currentMissing.length===0;
+
+    if(step===8){
+      // Final step - Generate Dashboard
+      nextBtn.className='btn btn-go';
+      nextBtn.style.opacity=canProceed?'1':'0.5';
+      nextBtn.title=canProceed?'Generate your market intelligence dashboard':`Answer all ${currentMissing.length} remaining question(s) to generate dashboard`;
+    }else{
+      // Steps 0-7 - Next button
+      nextBtn.className='btn btn-primary';
+      nextBtn.style.opacity=canProceed?'1':'0.5';
+      nextBtn.title=canProceed?'Proceed to next step':`Complete ${currentMissing.length} required field(s) to continue`;
+    }
+  }
 
   // ── Update individual dimension bars ──────────────────
   const dimVals=[d1,d2,d3,d4,d5,d6];
@@ -965,6 +1134,24 @@ function calcLive(){
   });
 
   buildLiveInsights(overall,{d1,d2,d3,d4,d5,d6});
+}
+
+function updateProblemCounter() {
+  const val  = document.getElementById('problem').value;
+  const len  = val.length;
+  const counter = document.getElementById('probCounter');
+  const hint    = document.getElementById('probHint');
+  if (!counter) return;
+
+  if (len < 20) {
+    counter.textContent = `${len} / 20`;
+    counter.style.color = len > 10 ? '#E8A000' : '#E00D00'; // orange when close, red when far
+    hint.style.color    = '#E00D00';
+  } else {
+    counter.textContent = `${len} ✓`;
+    counter.style.color = '#00A3A1';  // green when valid
+    hint.style.color    = '#9BAABB';
+  }
 }
 
 function buildLiveInsights(t,dims){
@@ -1048,59 +1235,38 @@ async function updateGeoPreview(){
 /* ══════════════════════════════════════════════════════
    AI QUESTION GENERATION — 8 sections, market-potential focus
 ══════════════════════════════════════════════════════ */
+// ✅ FIXED — hoist timer reference so catch can kill it, and skip retry on 429 entirely
+
+// ══════════════════════════════════════════════════════
+//   AI QUESTION GENERATION — instant fallback on any failure
+// ══════════════════════════════════════════════════════
 async function generateAIQuestions(){
   const sEl=document.getElementById('sector');
   const tEl=document.getElementById('bizType');
   const gEl=document.getElementById('geo');
-  const sector=sEl.options[sEl.selectedIndex].text;
-  const bizType=tEl.options[tEl.selectedIndex].text;
-  const geo=gEl.options[gEl.selectedIndex].text;
-  const problem=document.getElementById('problem').value||'Not specified';
-  const bizName=document.getElementById('bizName').value||'the product';
-  const stage=document.querySelector('#stagePills .pill.on')?.textContent||'Not specified';
+  const sector  = sEl.options[sEl.selectedIndex].text;
+  const bizType = tEl.options[tEl.selectedIndex].text;
+  const geo     = gEl.options[gEl.selectedIndex].text;
+  const problem = document.getElementById('problem').value||'Not specified';
+  const bizName = document.getElementById('bizName').value||'the product';
+  const stage   = document.querySelector('#stagePills .pill.on')?.textContent||'Not specified';
 
-  // Show skeletons while loading
+  // Show skeletons briefly while we try
   [1,2,3,4,5,6,7,8].forEach(i=>{
     const el=document.getElementById('q'+i);
     if(el)el.innerHTML='<div class="ql-skeleton"><div class="ql-skel-item"></div><div class="ql-skel-item"></div><div class="ql-skel-item"></div></div>';
   });
 
-  try{
-    // Retry with long wait for Gemini 429 rate limits (free tier = 15 req/min)
-    const fetchWithRetry=async(url,opts,maxTries=2)=>{
-      for(let attempt=1;attempt<=maxTries;attempt++){
-        const r=await fetch(url,opts);
-        if(r.status===429||r.status===529){
-          if(attempt===maxTries) return r;
-          const wait=62000; // Gemini free tier resets every 60s — wait 62s
-          [1,2,3,4,5,6,7,8].forEach(i=>{
-            const el=document.getElementById('q'+i);
-            if(el)el.innerHTML=`<div style="padding:16px;font-size:12px;color:#627289;text-align:center">⏳ Rate limit reached — waiting 62s for Gemini free tier reset…<br><br><span style="font-size:10px;color:#9BAABB">(Free tier: 15 requests/min. This is normal.)</span></div>`;
-          });
-          // Countdown display
-          let remaining=62;
-          const timer=setInterval(()=>{
-            remaining--;
-            [1,2,3,4,5,6,7,8].forEach(i=>{
-              const el=document.getElementById('q'+i);
-              if(el)el.innerHTML=`<div style="padding:16px;font-size:12px;color:#627289;text-align:center">⏳ Rate limit — retrying in <strong style="color:#00338D">${remaining}s</strong>…<br><br><span style="font-size:10px;color:#9BAABB">Gemini free tier resets every 60 seconds.</span></div>`;
-            });
-            if(remaining<=0)clearInterval(timer);
-          },1000);
-          await new Promise(res=>setTimeout(res,wait));
-          clearInterval(timer);
-          continue;
-        }
-        if(r.status>=500&&attempt<maxTries){
-          await new Promise(res=>setTimeout(res,3000));
-          continue;
-        }
-        return r;
-      }
-    };
+  // Helper: race a fetch against a timeout — if timeout wins, throw immediately
+  const fetchWithTimeout=(url,opts,ms=5000)=>{
+    const abort=new AbortController();
+    const timer=setTimeout(()=>abort.abort(),ms);
+    return fetch(url,{...opts,signal:abort.signal})
+      .finally(()=>clearTimeout(timer));
+  };
 
-    const _KEY='USE_SERVER_KEY';
-    const resp=await fetchWithRetry('/api',{
+  try{
+    const resp=await fetchWithTimeout('/api',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -1127,46 +1293,88 @@ Return ONLY this JSON structure, no markdown:
 {"id":7,"title":"Output & PMF Signal","icon":"📤","subtitle":"Validation evidence","questions":[<4 specific questions>]},
 {"id":8,"title":"${sector} Deep-Dive","icon":"🔬","subtitle":"${sector}-specific depth","questions":[<4 highly specific ${sector} questions>]}
 ]}`
-      })});
+      })
+    }, 5000); // ← 5 second hard timeout
 
-    // ── Gemini response parsing ──────────────────────────────
     if(!resp.ok) throw new Error('HTTP '+resp.status);
+
     const data=await resp.json();
     const allText=(data?.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
-    if(!allText) throw new Error('Empty response from API');
+    if(!allText) throw new Error('Empty response');
 
-    // Strip any markdown fences the model may have added
     let raw=allText.trim();
     const fenceMatch=raw.match(/```(?:json)?\s*([\s\S]*?)```/);
     if(fenceMatch) raw=fenceMatch[1].trim();
-
-    // Find the outermost { … } — handles leading prose
-    const start=raw.indexOf('{');
-    const end=raw.lastIndexOf('}');
-    if(start===-1||end===-1) throw new Error('No JSON object found in response');
+    const start=raw.indexOf('{'), end=raw.lastIndexOf('}');
+    if(start===-1||end===-1) throw new Error('No JSON in response');
     raw=raw.slice(start,end+1);
 
-    // Attempt parse; on failure try to repair truncated JSON
     let parsed;
-    try{
-      parsed=JSON.parse(raw);
-    }catch(parseErr){
-      // Repair: truncate to last complete section by finding last complete "}]}" pattern
-      const repaired=repairTruncatedJSON(raw);
-      parsed=JSON.parse(repaired);
+    try{ parsed=JSON.parse(raw); }
+    catch(_){
+      try{ parsed=JSON.parse(repairTruncatedJSON(raw)); }
+      catch(e2){ throw new Error('JSON parse failed'); }
     }
+
+    if(!Array.isArray(parsed.sections)||parsed.sections.length===0)
+      throw new Error('No sections in response');
 
     aiQs=parsed;
     if(aiQs.sb8txt)document.getElementById('sb8txt').textContent=aiQs.sb8txt;
     if(aiQs.d6name)document.getElementById('d6name').textContent=aiQs.d6name;
     if(aiQs.realTimeData)window._rtData=aiQs.realTimeData;
-
-    if(!Array.isArray(aiQs.sections)||aiQs.sections.length===0) throw new Error('No sections in parsed JSON');
     aiQs.sections.forEach((sec,i)=>renderSection(i+1,sec));
 
   }catch(e){
-    console.warn('AI question gen failed, using fallback:',e.message);
+    // Any failure (timeout, 429, network, parse error) → immediate fallback
+    console.warn('AI questions failed, using fallback:',e.message);
     useFallbackQuestions(sector,bizType,geo);
+  }
+}
+
+// ── SCREENSHOT & NOTIFY REACT ─────────────────────────────────
+async function captureAndSendScreenshot() {
+  try {
+    const el = document.getElementById('dashShell');
+    if (!el) return;
+
+    // Wait one frame to ensure charts are fully painted
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    const canvas = await html2canvas(el, {
+      scale: 2,              // 2× resolution for sharp PNG
+      useCORS: true,
+      backgroundColor: '#EEF2F7',
+      logging: false,
+      windowWidth: el.scrollWidth,
+      windowHeight: el.scrollHeight,
+    });
+
+    // Convert to PNG blob
+    canvas.toBlob(blob => {
+      if (!blob) return;
+
+      // 1. Auto-download to user's device
+      const url  = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href     = url;
+      link.download = `infopace-dashboard-${Date.now()}.png`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      // 2. Send blob to React parent for Supabase upload
+      blob.arrayBuffer().then(buf => {
+        window.parent.postMessage({
+          type:     'INFOPACE_SCREENSHOT',
+          buffer:   buf,
+          filename: `dashboard-${Date.now()}.png`,
+        }, '*', [buf]); // transfer ownership for performance
+      });
+
+    }, 'image/png', 1.0);
+
+  } catch(e) {
+    console.warn('Screenshot failed:', e.message);
   }
 }
 
@@ -1334,29 +1542,57 @@ function hideLoader(){document.getElementById('loaderShell').style.display='none
 /* ══════════════════════════════════════════════════════
    MAIN BUILD
 ══════════════════════════════════════════════════════ */
+// ✅ FIXED — tries API once, goes offline immediately on any failure:
 async function buildDashboard(){
   const fd=collectData();
   showLoader();
   setLoader(1,'Reading your inputs…',8);
-  await tick(200);
+
+  const fetchWithTimeout=(url,opts,ms=8000)=>{
+    const abort=new AbortController();
+    const timer=setTimeout(()=>abort.abort(),ms);
+    return fetch(url,{...opts,signal:abort.signal})
+      .finally(()=>clearTimeout(timer));
+  };
+
   let analysis;
   try{
-    setLoader(2,`Searching live ${fd.sector} market data in ${fd.geo}…`,25);
-    await tick(150);
-    setLoader(3,'Fetching real-time competitor profiles & funding data…',48);
-    analysis=await callAPI(fd);
-    setLoader(4,'Calculating TAM/SAM/SOM, scores & 12-month projections…',75);
+    setLoader(2,`Analysing ${fd.sector} market…`,30);
+    const prompt=buildPrompt(fd); // your existing prompt builder
+    const resp=await fetchWithTimeout('/api',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({_type:'analysis',prompt})
+    }, 8000);
+
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const data=await resp.json();
+    const allText=(data?.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
+    if(!allText) throw new Error('Empty response');
+
+    let raw=allText.trim();
+    const fm=raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if(fm) raw=fm[1].trim();
+    const s0=raw.indexOf('{'),e0=raw.lastIndexOf('}');
+    if(s0===-1||e0===-1) throw new Error('No JSON');
+    raw=raw.slice(s0,e0+1);
+    let parsed;
+    try{ parsed=JSON.parse(raw); }
+    catch(_){ try{ parsed=JSON.parse(repairTruncatedJSON(raw)); }catch(e2){ throw new Error('Parse failed'); } }
+    if(!parsed||typeof parsed!=='object') throw new Error('Invalid JSON');
+    analysis=parsed;
+    setLoader(5,'Assembling dashboard…',95);
     await tick(300);
-    setLoader(5,'Assembling your market intelligence dashboard…',95);
-    await tick(400);
+
   }catch(e){
-    console.warn('API failed, using fallback:',e.message);
-    setLoader(5,'Running offline analysis…',95);
+    console.warn('Analysis API failed, going offline:',e.message);
+    setLoader(5,'Building offline analysis…',95);
     analysis=offlineAnalysis(fd);
-    await tick(600);
+    await tick(200);
   }
   renderDash(fd,analysis);
 }
+
 const tick=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ══════════════════════════════════════════════════════
@@ -1464,16 +1700,20 @@ NOTE: These are GLOBAL sector market sizes per region — NOT the product revenu
 }`;
 
   // Exponential backoff helper (shared pattern)
-  const fetchWithRetry=async(url,opts,maxTries=3)=>{
-    for(let attempt=1;attempt<=maxTries;attempt++){
-      const r=await fetch(url,opts);
-      if((r.status===429||r.status===529||r.status>=500)&&attempt<maxTries){
-        await new Promise(res=>setTimeout(res,Math.min(2000*Math.pow(2,attempt-1),16000)));
-        continue;
-      }
-      return r;
-    }
-  };
+  // ✅ REPLACE WITH — single attempt, 10s timeout, immediate throw on any failure:
+const fetchWithRetry=async(url,opts)=>{
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),10000); // 10s timeout
+  try{
+    const r=await fetch(url,{...opts,signal:controller.signal});
+    clearTimeout(timeout);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r;
+  }catch(e){
+    clearTimeout(timeout);
+    throw new Error('API unavailable: '+e.message);
+  }
+};
 
   const _KEY2='USE_SERVER_KEY';
   const resp=await fetchWithRetry('/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
@@ -1515,156 +1755,541 @@ NOTE: These are GLOBAL sector market sizes per region — NOT the product revenu
 /* ══════════════════════════════════════════════════════
    OFFLINE FALLBACK — realistic sector-calibrated values
 ══════════════════════════════════════════════════════ */
-function offlineAnalysis(fd){
-  const sc=fd.sectorCode;
-  const gc=fd.geoCode;
-  const isIndia=['T1','T2','PI'].includes(gc);
-  const TAM={IT:2800,HC:1400,FS:3500,EC:8000,ED:650,MF:12000,RE:6000,LG:4500,ME:1200,AG:900,EN:2200,OT:500};
-  const GR={IT:28,HC:22,FS:25,EC:35,ED:30,MF:15,RE:12,LG:14,ME:18,AG:20,EN:32,OT:18};
-  const tamC=(TAM[sc]||500)*(isIndia?0.18:1.0);
-  const gr=GR[sc]||20;
-  const t=+document.getElementById('liveScore').textContent||50;
-  const tgtPct=Math.round(2+t/100*8);
+// ══════════════════════════════════════════════════════════════════
+//  OFFLINE ANALYSIS  — fully input-driven replacement
+//  Drop this in place of the existing offlineAnalysis() in dashboard.html
+//  Every number, every label, every text is derived from the user's
+//  actual inputs: sector, geo, bizType, stage, problem length/keywords,
+//  and the per-dimension live scores from their assessment answers.
+// ══════════════════════════════════════════════════════════════════
+function offlineAnalysis(fd) {
 
-  // Always use sector default competitors — never fall back to empty
-  const defComps={
-    IT:['Zoho','Freshworks','LeadSquared'],
-    HC:['Practo','Mfine','Portea'],
-    FS:['Razorpay','Zerodha','PayU'],
-    EC:['Meesho','Flipkart','Nykaa'],
-    ED:["BYJU'S",'Unacademy','upGrad'],
-    MF:['Tata Technologies','L&T','Mahindra'],
-    RE:['NoBroker','MagicBricks','99acres'],
-    LG:['Delhivery','Ecom Express','Shiprocket'],
-    ME:['Zee5','SonyLiv','MXPlayer'],
-    AG:['DeHaat','Ninjacart','Agristack'],
-    EN:['ReNew Power','Greenko','Adani Green'],
-    OT:['Competitor A','Competitor B','Competitor C']
+  // ── 1. RAW INPUTS ─────────────────────────────────────────────
+  const sc   = fd.sectorCode   || 'OT';
+  const gc   = fd.geoCode      || 'PI';
+  const bt   = fd.bizTypeCode  || 'B2B_SME';
+  const stage= (fd.stage       || '').toLowerCase();
+  const prob = (fd.problem      || '').toLowerCase();
+  const bizN = fd.bizName       || 'Your Product';
+  const answers = fd.answers   || {};
+
+  // ── 2. READ PER-DIMENSION LIVE SCORES ─────────────────────────
+  // Re-derive from DOM the same way calcLive() does so we get
+  // genuine spread across the 6 dimensions, not just overall.
+  function readDimScores() {
+    const dimMap = {
+      s1:'d1',s2:'d2',s3:'d3',s4:'d4',s5:'d5',s6:'d4',s7:'d2',s8:'d6',
+      f1:'d1',f2:'d2',f3:'d3',f4:'d4',f5:'d5',f6:'d4',f7:'d2',f8:'d6'
+    };
+    const buckets = { d1:[], d2:[], d3:[], d4:[], d5:[], d6:[] };
+
+    document.querySelectorAll('.ai-sel').forEach(el => {
+      if (!el.value) return;
+      const v = +(el.value) || 0;
+      const w = +(el.dataset.w) || 2;
+      const prefix = el.id.replace(/q\d+$/, '').slice(0, 2);
+      const dim = dimMap[prefix] || 'd1';
+      buckets[dim].push({ v, w });
+    });
+    document.querySelectorAll('.ai-pills').forEach(grp => {
+      const on = grp.querySelector('.pill.on');
+      if (!on) return;
+      const v = +(on.dataset.val) || 3;
+      const prefix = (grp.id || '').slice(0, 2);
+      const dim = dimMap[prefix] || 'd1';
+      buckets[dim].push({ v, w: 2 });
+    });
+
+    const score = key => {
+      const items = buckets[key] || [];
+      if (!items.length) return null;
+      const totalW   = items.reduce((s, i) => s + i.w, 0);
+      const weighted = items.reduce((s, i) => s + i.v * i.w, 0);
+      return Math.round(((weighted / totalW) - 1) / 4 * 100);
+    };
+
+    return {
+      d1: score('d1'), // Market Size
+      d2: score('d2'), // Audience Quality
+      d3: score('d3'), // Competition Edge
+      d4: score('d4'), // Revenue Potential
+      d5: score('d5'), // Risk Profile
+      d6: score('d6'), // Sector Fit
+    };
+  }
+
+  const dims = readDimScores();
+
+  // Overall score from DOM (already computed by calcLive)
+  // ✅ REPLACEMENT — compute score from fd.answers directly
+
+// ── SCORE FROM ANSWERS ─────────────────────────────────────────
+// fd.answers stores option TEXT labels (e.g. "₹500Cr–₹5,000Cr").
+// We map those text labels back to their numeric values (1–5)
+// using the same lookup table the questions were built with.
+const ANSWER_SCORES = {
+  // Section 1 — Market Size
+  'Under ₹50 Crore':1,'₹50–500 Crore':2,'₹500Cr–₹5,000Cr':3,'₹5,000Cr–₹50,000Cr':4,'Above ₹50,000 Crore':5,
+  '<10% YoY':1,'10–25%':2,'25–50%':3,'50–100%':4,'>100%':5,
+  'Nascent / Pre-market':4,'Emerging (early adopters)':5,'Growing (mainstream)':3,'Mature / Saturated':1,
+  'SME / Mid-market (underserved vs Enterprise)':5,'Tier 2/3 geographies':4,'Vernacular / regional language users':4,
+  'Price-sensitive mass market':3,'Ultra-premium segment':3,'No clear underserved segment':1,
+  // Section 2 — Audience
+  'C-Suite / Board level':5,'VP / Department Head':4,'Manager / Team Lead':3,'End User / Individual':2,'Government Committee':5,
+  'Under ₹1 Lakh/yr':1,'₹1L–₹10L/yr':2,'₹10L–₹1Cr/yr':3,'₹1Cr–₹10Cr/yr':4,'Above ₹10Cr/yr':5,
+  'Already paying – validated':5,'Strong intent, not yet paying':4,'Moderate interest':3,'Price-sensitive':2,'Expects free / subsidized':1,
+  'Same day':5,'<1 month':4,'1–3 months':3,'3–12 months':2,'>12 months':1,
+  // Section 3 — Competition
+  'None (Blue Ocean)':5,'1–3 direct competitors':4,'4–10 direct competitors':3,'11–30 direct competitors':2,'30+ direct competitors':1,
+  'No funded competitors':5,'Bootstrapped only':4,'Series A/B':3,'Series C+ / Growth stage':2,'Listed / MNC / Large Corp':1,
+  'Proprietary technology / AI / IP':5,'10× lower cost than alternatives':4,'Exclusive distribution / partnerships':4,
+  'Network effects / data flywheel':5,'Regulatory licence / compliance edge':4,'Similar to competition':2,'No clear moat yet':1,
+  'Ignoring Tier 2/3 markets':5,'Too expensive for SME segment':4,'Poor UX / dated interface':4,
+  'No API / integration capability':4,'Slow customer support':3,'Gaps in specific features':3,'No clear weakness found':1,
+  // Section 4 — Revenue
+  'SaaS / Subscription (recurring)':5,'Marketplace / Platform (GMV take-rate)':4,'Usage-based / Consumption':4,
+  'Licensing / Royalty':4,'Transactional (per transaction)':3,'Product Sales (one-time)':3,'Project / Consulting':2,
+  '<20%':1,'20–40%':2,'40–60%':3,'60–80%':4,'>80%':5,
+  '<1:1':1,'1–3:1':2,'3–5:1':3,'5–10:1':4,'>10:1':5,
+  '<3 months':5,'3–6 months':4,'6–12 months':3,'12–24 months':2,'24+ months':1,
+  // Section 5 — Risk
+  'No regulation required':5,'Standard compliance (GST, etc.)':4,'Sector-specific licence':2,'Multi-regulator compliance':1,'Government approval required':2,
+  'Fully proven tech stack':5,'Mostly proven, some R&D':4,'Significant R&D needed':3,'Experimental / cutting-edge':2,'Unproven technology':1,
+  'Serial founders, domain experts, prior exits':5,'Domain experts, first startup':4,'Relevant experience, filling key gaps':3,
+  'Limited domain experience':2,'First-time, no domain background':1,
+  // Section 6 — GTM
+  'Direct Sales / Inside Sales':4,'Channel Partners / Resellers':4,'Product-Led Growth (PLG)':5,
+  'Inbound / Content Marketing':3,'Events / Conferences':3,'Government / Tender channel':3,'Referral / Community':5,
+  'Under ₹5,000':5,'₹5K–₹25K':4,'₹25K–₹1L':3,'₹1L–₹5L':2,'Above ₹5 Lakh':1,
+  'Single city focus first':5,'2–3 cities simultaneously':4,'Nationwide from day one':2,'Online-only (no geo constraint)':4,'Global from day one':3,
+  'Strong network effects':5,'Some network effects':3,'Minimal network effects':2,'No network effects':1,
+  // Section 7 — PMF
+  'Measurable cost reduction (quantified)':5,'Revenue increase for customer (quantified)':5,'Time saved (quantified in hours/₹)':4,
+  'Risk reduction / compliance (auditable)':4,'Quality improvement (measurable)':3,'Soft benefit only (hard to quantify)':1,
+  'Paying customers (>10)':5,'1–10 paid customers':4,'LOIs / signed pilots':3,'User signups / waitlist':2,'Surveys / interviews only':1,
+  'Daily active use / mission critical':5,'Weekly active use':4,'Monthly active use':3,'Quarterly / seasonal use':2,'One-time / annual use only':1,
+  'Same day value':5,'Within 1 week':4,'1–4 weeks':3,'1–3 months':2,'3+ months':1,
+  // Section 8 — Sector Fit
+  'Innovators / Early Adopters (top 15%)':5,'Early Majority (mainstream adoption starting)':4,'Late Majority (most peers already use)':2,'Laggards (resistant)':1,
+  'Hyper-scalable (software)':5,'High scalability':4,'Moderate scalability':3,'Limited scalability':2,'Linear cost scaling':1,
+  'High investor interest':5,'Moderate interest':3,'Low interest / niche':2,'Difficult to fund':1,
+  '>10× ARR (SaaS / AI)':5,'5–10× ARR':4,'3–5× ARR':3,'1–3× Revenue':2,'<1× Revenue':1,
+};
+
+// Map question ID prefix → dimension bucket
+const DIM_MAP = {
+  f1:'d1', f2:'d2', f3:'d3', f4:'d4', f5:'d5', f6:'d4', f7:'d2', f8:'d6',
+  s1:'d1', s2:'d2', s3:'d3', s4:'d4', s5:'d5', s6:'d4', s7:'d2', s8:'d6',
+};
+
+const buckets = { d1:[], d2:[], d3:[], d4:[], d5:[], d6:[] };
+
+Object.entries(fd.answers || {}).forEach(([key, val]) => {
+  const prefix = key.slice(0, 2); // e.g. "f1", "f2", "s3"
+  const dim = DIM_MAP[prefix];
+  if (!dim) return;
+
+  const vals = Array.isArray(val) ? val : [val];
+  vals.forEach(v => {
+    const score = ANSWER_SCORES[v];
+    if (score) buckets[dim].push(score);
+    // checkboxes: each checked item is a moderate signal (no numeric value)
+    else if (typeof v === 'string' && v.length > 2) buckets[dim].push(4);
+  });
+});
+
+const dimAvg = key => {
+  const items = buckets[key];
+  if (!items.length) return null;
+  return Math.round(((items.reduce((a,b)=>a+b,0)/items.length) - 1) / 4 * 100);
+};
+
+const computedDims = {
+  d1: dimAvg('d1'), d2: dimAvg('d2'), d3: dimAvg('d3'),
+  d4: dimAvg('d4'), d5: dimAvg('d5'), d6: dimAvg('d6'),
+};
+
+// Context bonus from fd fields (sector + bizType + geo + problem length + stage)
+const probLen2    = (fd.problem || '').length;
+const probScore2  = probLen2 > 120 ? 5 : probLen2 > 60 ? 3 : probLen2 > 20 ? 1 : 0;
+const stageIdx2   = ['idea','mvp','pilot','paying','scaling'].findIndex(k => (fd.stage||'').toLowerCase().includes(k));
+const contextBonus = (fd.sectorCode ? 3 : 0) + (fd.bizTypeCode ? 3 : 0) + (fd.geoCode ? 2 : 0) + probScore2 + Math.min(Math.max(stageIdx2,0), 5);
+
+const answeredDims = [computedDims.d1, computedDims.d2, computedDims.d3, computedDims.d4, computedDims.d5, computedDims.d6].filter(v => v !== null);
+let t = 50; // default if no answers
+if (answeredDims.length > 0) {
+  const weights = [15, 20, 25, 25, 10, 5];
+  const allD    = [computedDims.d1, computedDims.d2, computedDims.d3, computedDims.d4, computedDims.d5, computedDims.d6];
+  let wSum = 0, wTotal = 0;
+  allD.forEach((v, i) => { if (v !== null) { wSum += v * weights[i]; wTotal += weights[i]; } });
+  const bonus = answeredDims.length >= 2 ? Math.round(contextBonus / 15 * 15) : 0;
+  t = Math.min(100, Math.round((wSum / wTotal) * 0.85 + bonus));
+  if (answeredDims.length < 3) t = Math.min(t, 60);
+  if (probLen2 < 40 && t > 70) t = 70;
+}
+
+// Also update the liveScore DOM element so it stays in sync
+const lsEl2 = document.getElementById('liveScore');
+if (lsEl2) lsEl2.textContent = t;
+
+  // ── 3. PROBLEM-STATEMENT SIGNALS ─────────────────────────────
+  // Extract signals from the problem text to vary TAM / score / insights
+  const probLen = prob.length;
+
+  // Is this B2B, enterprise-focused, or consumer?
+  const isEnterprise = /enterprise|corporat|large.?org|fortune|bank|hospital/i.test(prob);
+  const isB2B        = bt.startsWith('B2B') || isEnterprise;
+  const isConsumer   = /consumer|retail|individual|student|family|personal/i.test(prob);
+  const isTech       = /ai|ml|saas|platform|api|automat|software/i.test(prob);
+  const isDeep       = /research|deep.?tech|biotech|hardware|manufactur/i.test(prob);
+  const isMarket     = /market|distribution|supply.?chain|logistic/i.test(prob);
+
+  // Problem clarity score (0–10) — longer, specific problems = better
+  const probClarity  = probLen > 200 ? 10 : probLen > 120 ? 7 : probLen > 60 ? 4 : probLen > 20 ? 2 : 0;
+
+  // ── 4. STAGE MULTIPLIERS ──────────────────────────────────────
+  // Earlier stage = lower SOM realism, higher risk
+  const STAGE_IDX = { 'idea':0, 'mvp':1, 'pilot':2, 'paying':3, 'scaling':4 };
+  const stageIdx  = Object.entries(STAGE_IDX).find(([k]) => stage.includes(k))?.[1] ?? 2;
+  // SOM reachability rises with stage
+  const somMult   = [0.015, 0.025, 0.04, 0.06, 0.09][stageIdx];
+  // Risk is highest at idea stage
+  const riskBase  = [30, 40, 52, 65, 72][stageIdx];
+
+  // ── 5. GEO MULTIPLIERS ────────────────────────────────────────
+  const GEO_MULT = { T1:0.22, T2:0.28, PI:0.18, SA:0.35, SE:0.42, MEA:0.55, EU:1.0, NA:1.2, GL:1.0 };
+  const geoMult  = GEO_MULT[gc] || 0.18;
+  const isIndia  = ['T1','T2','PI'].includes(gc);
+
+  // ── 6. SECTOR BASE TAM & GROWTH ──────────────────────────────
+  // Base TAM in ₹Cr (India context) or $M (global)
+  const SECTOR_DATA = {
+    IT:  { tam:2800, gr:28, samPct:0.22, compConc:'fragmented' },
+    HC:  { tam:1400, gr:22, samPct:0.18, compConc:'moderate'   },
+    FS:  { tam:3500, gr:25, samPct:0.20, compConc:'consolidated'},
+    EC:  { tam:8000, gr:35, samPct:0.15, compConc:'consolidated'},
+    ED:  { tam: 650, gr:30, samPct:0.25, compConc:'fragmented' },
+    MF:  { tam:12000,gr:15, samPct:0.12, compConc:'consolidated'},
+    RE:  { tam:6000, gr:12, samPct:0.10, compConc:'fragmented' },
+    LG:  { tam:4500, gr:14, samPct:0.16, compConc:'moderate'   },
+    ME:  { tam:1200, gr:18, samPct:0.20, compConc:'consolidated'},
+    AG:  { tam: 900, gr:20, samPct:0.22, compConc:'fragmented' },
+    EN:  { tam:2200, gr:32, samPct:0.18, compConc:'fragmented' },
+    OT:  { tam: 500, gr:18, samPct:0.20, compConc:'fragmented' },
   };
-  const compList=(defComps[sc]||['Competitor A','Competitor B','Competitor C']).slice(0,3);
 
-  const rem=100-tgtPct;
-  const spl=[0.35,0.27,0.20,0.12];
+  const SD   = SECTOR_DATA[sc] || SECTOR_DATA.OT;
+  const tamC = Math.round(SD.tam * geoMult);
 
-  // Market share — always 5 entries: product + 3 competitors + Others
-  const mshare=[
-    {name:fd.bizName, pct:tgtPct, val:'₹'+Math.round(tamC*tgtPct/100)+'Cr'},
-    {name:compList[0], pct:Math.round(rem*spl[0]), val:'₹'+Math.round(tamC*rem*spl[0]/100)+'Cr'},
-    {name:compList[1], pct:Math.round(rem*spl[1]), val:'₹'+Math.round(tamC*rem*spl[1]/100)+'Cr'},
-    {name:compList[2], pct:Math.round(rem*spl[2]), val:'₹'+Math.round(tamC*rem*spl[2]/100)+'Cr'},
-    {name:'Others',    pct:Math.max(1,100-tgtPct-Math.round(rem*spl[0])-Math.round(rem*spl[1])-Math.round(rem*spl[2])), val:'—'}
+  // Adjust growth rate slightly based on answers (competition edge score)
+  const grAdjust = dims.d3 !== null ? Math.round((dims.d3 - 50) / 50 * 4) : 0;
+  const gr       = Math.max(8, SD.gr + grAdjust);
+
+  // SAM: adjusted by problem clarity (specific problem = bigger reachable slice)
+  const samPctAdj = SD.samPct + probClarity * 0.005;
+  const samC      = Math.round(tamC * Math.min(samPctAdj, 0.45));
+
+  // SOM: stage-driven + bonus for high revenue-potential score
+  const revBonus   = dims.d4 !== null ? (dims.d4 - 50) / 50 * 0.015 : 0;
+  const somC       = Math.round(tamC * Math.max(0.01, somMult + revBonus));
+
+  // Target market share %
+  const tgtPct     = Math.max(1, Math.round(somC / tamC * 100));
+
+  // ── 7. COMPETITORS (sector + bizType aware) ───────────────────
+  // Different competitor sets per bizType within sector where relevant
+  const COMPS = {
+    IT:  { B2B_ENT:['SAP','Oracle','Salesforce'],   B2B_SME:['Zoho','Freshworks','LeadSquared'],   B2C_MASS:['Notion','Monday.com','Canva'] },
+    HC:  { B2B_ENT:['Philips Health','Siemens','GE Healthcare'], B2B_SME:['Practo','Mfine','Portea'], B2C_MASS:['PharmEasy','1mg','Tata Health'] },
+    FS:  { B2B_ENT:['HDFC','ICICI','Axis Bank'],    B2B_SME:['Razorpay','PayU','Cashfree'],        B2C_MASS:['Zerodha','Groww','Paytm Money'] },
+    EC:  { B2B_ENT:['Amazon Business','Udaan','IndiaMart'], B2B_SME:['Meesho','Juspay','Shiprocket'], B2C_MASS:['Flipkart','Nykaa','Myntra'] },
+    ED:  { B2B_ENT:['Coursera','LinkedIn Learning','Simplilearn'], B2B_SME:['upGrad','Scaler','PW Skills'], B2C_MASS:["BYJU'S",'Unacademy','Khan Academy'] },
+    MF:  { B2B_ENT:['Tata Technologies','L&T','Mahindra'], B2B_SME:['KPIT','Cyient','Zensar'],     B2C_MASS:['Urban Company','iFixit','Amazon Basics'] },
+    RE:  { B2B_ENT:['JLL','CBRE','Colliers'],        B2B_SME:['NoBroker','Square Yards','PropTiger'], B2C_MASS:['MagicBricks','Housing.com','99acres'] },
+    LG:  { B2B_ENT:['Blue Dart','FedEx','DHL'],      B2B_SME:['Delhivery','Ecom Express','Shadowfax'], B2C_MASS:['Dunzo','Swiggy Instamart','Zepto'] },
+    ME:  { B2B_ENT:['Sony Pictures','Star India','Viacom18'], B2B_SME:['TVF','Pocket FM','Stage'], B2C_MASS:['Netflix','Hotstar','Zee5'] },
+    AG:  { B2B_ENT:['ITC Agri','Rallis India','Coromandel'], B2B_SME:['DeHaat','Ninjacart','Jai Kisan'], B2C_MASS:['BigBasket','Agristack','AgroStar'] },
+    EN:  { B2B_ENT:['Adani Green','ReNew Power','Greenko'], B2B_SME:['Zunroof','SolarSquare','Amplus Solar'], B2C_MASS:['Tata Power','NTPC','CESC'] },
+    OT:  { B2B_ENT:['Competitor A','Competitor B','Competitor C'], B2B_SME:['Competitor A','Competitor B','Competitor C'], B2C_MASS:['Competitor A','Competitor B','Competitor C'] },
+  };
+
+  const sectorComps = COMPS[sc] || COMPS.OT;
+  // Pick set by bizTypeCode; fallback chain: exact → B2B_SME → first available
+  const compList = (sectorComps[bt] || sectorComps['B2B_SME'] || Object.values(sectorComps)[0]).slice(0, 3);
+
+  // ── 8. COMPETITOR MARKET SHARE SPLIT ─────────────────────────
+  // Split varies by market concentration + competition-edge score
+  // Low competition-edge score → incumbents have bigger share
+  const d3Score = dims.d3 !== null ? dims.d3 : 50;
+  const incumbentStrength = (100 - d3Score) / 100; // 0=fragmented, 1=very dominant
+  const rem = 100 - tgtPct;
+
+  // Spread shifts: dominant market → top comp has more
+  const spl = SD.compConc === 'consolidated'
+    ? [0.40 + incumbentStrength * 0.08, 0.27, 0.17]
+    : SD.compConc === 'moderate'
+    ? [0.35 + incumbentStrength * 0.05, 0.27, 0.20]
+    : [0.32, 0.26, 0.22]; // fragmented — more even
+
+  const mshare = [
+    { name: bizN,         pct: tgtPct,                        val: '₹' + Math.round(tamC * tgtPct / 100)        + 'Cr' },
+    { name: compList[0],  pct: Math.round(rem * spl[0]),       val: '₹' + Math.round(tamC * rem * spl[0] / 100) + 'Cr' },
+    { name: compList[1],  pct: Math.round(rem * spl[1]),       val: '₹' + Math.round(tamC * rem * spl[1] / 100) + 'Cr' },
+    { name: compList[2],  pct: Math.round(rem * spl[2]),       val: '₹' + Math.round(tamC * rem * spl[2] / 100) + 'Cr' },
+    { name: 'Others',     pct: Math.max(1, 100 - tgtPct - Math.round(rem * spl[0]) - Math.round(rem * spl[1]) - Math.round(rem * spl[2])), val: '—' },
   ];
 
-  // Competitor profiles — always populated
-  const compProfiles=compList.map((name,i)=>({
+  // ── 9. COMPETITOR PROFILES ───────────────────────────────────
+  // Strength/weakness descriptions vary by bizType and sector
+  const COMP_STRENGTHS = {
+    B2B_ENT:  ['Deep enterprise integrations & compliance certifications', 'Strong C-suite relationships & long-term contracts', 'Global support infrastructure & SLA guarantees'],
+    B2B_SME:  ['Wide SME distribution & established reseller network',    'Strong product depth & high retention rates',            'Aggressive pricing & fast onboarding for SMEs'],
+    B2C_MASS: ['Massive consumer brand recognition & trust',              'High DAU & network effects lock-in',                     'Deep discounting capability & marketing spend'],
+  };
+  const COMP_WEAKNESSES = {
+    B2B_ENT:  ['Slow innovation cycle & expensive customisation',        'Poor UX — built for IT managers, not end users',           'Weak mid-market pricing tiers'],
+    B2B_SME:  ['Limited enterprise-grade compliance & security posture', 'High churn in competitive geographies',                   'Weak product for complex, multi-entity businesses'],
+    B2C_MASS: ['High CAC & unsustainable unit economics',                'Low monetisation depth beyond free tier',                  'Thin margins & heavy dependence on paid acquisition'],
+  };
+
+  const btKey    = isEnterprise ? 'B2B_ENT' : isConsumer ? 'B2C_MASS' : 'B2B_SME';
+  const strengths  = COMP_STRENGTHS[btKey]  || COMP_STRENGTHS.B2B_SME;
+  const weaknesses = COMP_WEAKNESSES[btKey] || COMP_WEAKNESSES.B2B_SME;
+
+  const compProfiles = compList.map((name, i) => ({
     name,
-    stage:['Series C / Listed','Series B','Series A'][i]||'Funded',
-    strength:['Wide distribution & brand recognition','Strong product depth & retention','Aggressive pricing & SME focus'][i]||'Established market presence',
-    weakness:['Weak Tier 2/3 penetration','Poor UX for non-tech users','Limited enterprise features'][i]||'Slower innovation cycle',
-    marketSharePct:Math.round(rem*spl[i])
+    stage:          ['Series C / Listed', 'Series B', 'Series A'][i] || 'Funded',
+    strength:       strengths[i]  || strengths[0],
+    weakness:       weaknesses[i] || weaknesses[0],
+    marketSharePct: Math.round(rem * spl[i]),
   }));
 
-  // Cities / regions — per sector for realistic city names
-  const cityMap={
-    IT:  ['Mumbai','Delhi NCR','Bangalore','Hyderabad','Chennai','Pune'],
-    HC:  ['Mumbai','Delhi','Bangalore','Hyderabad','Chennai','Pune'],
-    FS:  ['Mumbai','Delhi NCR','Bangalore','Hyderabad','Chennai','Pune'],
-    EC:  ['Mumbai','Delhi','Bangalore','Hyderabad','Chennai','Kolkata'],
-    ED:  ['Mumbai','Delhi','Bangalore','Hyderabad','Chennai','Pune'],
-    MF:  ['Mumbai','Pune','Chennai','Hyderabad','Surat','Ahmedabad'],
-    RE:  ['Mumbai','Delhi NCR','Bangalore','Hyderabad','Chennai','Pune'],
-    LG:  ['Mumbai','Delhi','Bangalore','Chennai','Hyderabad','Kolkata'],
-    ME:  ['Mumbai','Delhi','Bangalore','Hyderabad','Chennai','Pune'],
-    AG:  ['Delhi','Hyderabad','Bangalore','Pune','Chennai','Mumbai'],
-    EN:  ['Ahmedabad','Mumbai','Delhi','Bangalore','Hyderabad','Chennai'],
-    OT:  ['Mumbai','Delhi','Bangalore','Hyderabad','Chennai','Pune']
-  };
-  const intlCities=['Asia Pacific','North America','Europe','South America','Africa','ROW'];
-  const cities=isIndia?(cityMap[sc]||cityMap.OT):intlCities;
-
-  const base=tamC/cities.length;
-  const mults=[1.25,1.05,1.35,0.85,0.70,0.65];
-
-  const months=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
-  const ttmMo=3;
-  const ourTrend=months.map((_,i)=>i<ttmMo?0:+((tgtPct*(i-ttmMo+1)/10)).toFixed(1));
-  const c1Trend=months.map((_,i)=>+(rem*0.35*(0.88+i*0.008)+Math.sin(i*0.8)*0.6).toFixed(1));
-  const c2Trend=months.map((_,i)=>+(rem*0.27*(0.82+i*0.007)+Math.sin(i*1.1+1)*0.5).toFixed(1));
-  const c3Trend=months.map((_,i)=>+(rem*0.20*(0.80+i*0.006)+Math.sin(i*0.9+2)*0.4).toFixed(1));
-
-  const geoRevs={
-    'Asia Pacific':{rev:isIndia?'₹'+Math.round(tamC*0.45)+'Cr':'$'+Math.round(tamC*0.32)+'M',pct:isIndia?'45%':'32%'},
-    'North America':{rev:'$'+Math.round(tamC*0.26)+'M',pct:'26%'},
-    'South America':{rev:'$'+Math.round(tamC*0.12)+'M',pct:'12%'},
-    'Europe':{rev:'€'+Math.round(tamC*0.21)+'M',pct:'21%'},
-    'Africa':{rev:'$'+Math.round(tamC*0.06)+'M',pct:'6%'}
+  // ── 10. GEOGRAPHY CITY LIST & REVENUE BY REGION ───────────────
+  // Each geo gets its own cities, with multipliers that vary by sector
+  const CITY_MAP = {
+    T1:  ['Mumbai', 'Delhi NCR', 'Bangalore', 'Hyderabad', 'Chennai', 'Pune'],
+    T2:  ['Jaipur', 'Lucknow', 'Ahmedabad', 'Bhopal', 'Indore', 'Coimbatore'],
+    PI:  ['Mumbai', 'Delhi NCR', 'Bangalore', 'Hyderabad', 'Chennai', 'Pune'],
+    SA:  ['Mumbai', 'Dhaka', 'Colombo', 'Karachi', 'Kathmandu', 'Colombo'],
+    SE:  ['Singapore', 'Jakarta', 'Bangkok', 'Kuala Lumpur', 'Manila', 'Ho Chi Minh City'],
+    MEA: ['Dubai', 'Riyadh', 'Cairo', 'Lagos', 'Nairobi', 'Johannesburg'],
+    EU:  ['London', 'Berlin', 'Paris', 'Amsterdam', 'Stockholm', 'Madrid'],
+    NA:  ['New York', 'San Francisco', 'Chicago', 'Toronto', 'Los Angeles', 'Seattle'],
+    GL:  ['Asia Pacific', 'North America', 'Europe', 'South America', 'Africa', 'ROW'],
   };
 
-  const radarAxes=['pricingPower','distribution','brandValue','innovation','marketReach','customerSat'];
-  const ourOffsets=[+5,-3,+2,+8,-4,+6];
-  const ourR=radarAxes.map((_,i)=>Math.min(100,Math.max(5,t+ourOffsets[i])));
-  const COMP_OFFSETS=[[-8,+6,-5,+10,-12,+4],[+5,-10,+8,-6,+3,-9],[-12,+4,-10,+8,-6,+12]];
-  const radar=[
-    {name:fd.bizName,scores:Object.fromEntries(radarAxes.map((k,i)=>[k,ourR[i]])),avg:(ourR.reduce((a,b)=>a+b)/6).toFixed(1)},
-    ...compList.map((n,ci)=>{
-      const s=ourR.map((v,ai)=>Math.min(100,Math.max(5,v+COMP_OFFSETS[ci][ai])));
-      return{name:n,scores:Object.fromEntries(radarAxes.map((k,i)=>[k,s[i]])),avg:(s.reduce((a,b)=>a+b)/6).toFixed(1)};
-    })
+  // City multipliers vary per sector — e.g. FS is Mumbai-heavy, IT is Bangalore-heavy
+  const CITY_MULT_BY_SECTOR = {
+    IT:  [1.10, 1.05, 1.45, 1.20, 0.90, 1.30], // Bangalore & Hyderabad lead
+    HC:  [1.35, 1.20, 1.10, 0.95, 1.05, 0.85], // Mumbai & Delhi lead
+    FS:  [1.50, 1.25, 0.95, 0.80, 0.75, 0.75], // Mumbai dominates FS
+    EC:  [1.30, 1.15, 1.10, 0.90, 0.85, 0.70],
+    ED:  [0.95, 1.10, 1.20, 1.15, 0.85, 0.75], // Tier 2 matters for ED
+    MF:  [0.80, 0.90, 0.75, 1.10, 0.85, 1.60], // Pune is MF hub
+    RE:  [1.55, 1.30, 0.90, 0.85, 0.70, 0.70], // Mumbai/Delhi RE
+    LG:  [1.20, 1.15, 1.05, 0.90, 0.85, 0.85],
+    ME:  [1.30, 1.20, 0.95, 0.80, 0.85, 0.90],
+    AG:  [0.65, 0.80, 0.65, 0.90, 0.85, 1.15], // Distributed
+    EN:  [0.90, 0.95, 0.85, 1.05, 0.90, 1.35], // Pune / RE-heavy
+    OT:  [1.25, 1.05, 1.10, 0.90, 0.85, 0.85],
+  };
+
+  const cities = CITY_MAP[gc] || CITY_MAP.PI;
+  const mults  = CITY_MULT_BY_SECTOR[sc] || [1.25, 1.05, 1.10, 0.90, 0.80, 0.70];
+  const base   = tamC / cities.length;
+
+  const revenueByRegion = {
+    labels:        cities,
+    currentMarket: cities.map((_, i) => +(base * mults[i] * 0.72).toFixed(1)),
+    projected2027: cities.map((_, i) => +(base * mults[i] * (1 + gr / 100)).toFixed(1)),
+    ourTarget:     cities.map((_, i) => +(base * mults[i] * tgtPct / 100 * 0.85).toFixed(1)),
+  };
+
+  // ── 11. RADAR SCORES ─────────────────────────────────────────
+  // Our scores derived from actual per-dimension assessment answers.
+  // Competitor offsets vary per competitor archetype (established giant vs scrappy startup).
+  const radarAxes = ['pricingPower','distribution','brandValue','innovation','marketReach','customerSat'];
+
+  // Map dimension scores to radar axes for our product
+  // d1=MarketSize→marketReach, d2=Audience→customerSat, d3=Competition→brandValue+distribution,
+  // d4=Revenue→pricingPower, d5=Risk→(inverse)innovation, d6=SectorFit→overall
+  const safeD = d => d !== null ? d : t; // fall back to overall if dim not answered
+  const ourR = [
+    Math.min(100, Math.max(5, safeD(dims.d4) + (isTech ? 8 : 0))),                              // pricingPower
+    Math.min(100, Math.max(5, safeD(dims.d3) - 10 + (stageIdx >= 3 ? 12 : 0))),                  // distribution
+    Math.min(100, Math.max(5, safeD(dims.d1) - 5 + (probClarity > 7 ? 8 : 0))),                  // brandValue
+    Math.min(100, Math.max(5, safeD(dims.d6) + (isTech ? 12 : isDeep ? 15 : 5))),                // innovation
+    Math.min(100, Math.max(5, safeD(dims.d2) + (stageIdx >= 3 ? 10 : -5))),                      // marketReach
+    Math.min(100, Math.max(5, safeD(dims.d5) + (isB2B ? 6 : 3))),                                // customerSat
   ];
 
-  return{
-    overallScore:t,
-    grade:t>=75?'Excellent':t>=60?'Strong':t>=45?'Moderate':t>=30?'Needs Work':'Critical',
-    verdict:`${fd.bizName} has ${t>=60?'strong':'moderate'} potential in the ${fd.sector} market targeting ${fd.geo} — key opportunity in ${cities[0]} and ${cities[1]}.`,
-    dimensions:{marketSize:Math.min(100,t+4),audienceQuality:Math.min(100,t-2),competitionEdge:Math.max(0,t-7),revenuePotential:Math.min(100,t+2),riskProfile:Math.max(0,t-4),sectorFit:Math.min(100,t+6)},
-    tamCrore:Math.round(tamC),
-    samCrore:Math.round(tamC*0.28),
-    somCrore:Math.round(tamC*tgtPct/100),
-    growthRate:gr,
-    currency:'₹Cr',
-    marketShare:mshare,
+  // Competitor offsets: large incumbent vs mid-market vs emerging
+  // Incumbents beat us on distribution & brand; we beat them on innovation
+  const COMP_OFFSETS = [
+    // Incumbent (comp 0): strong distribution & brand, weak innovation
+    [+8,  +22, +25, -18, +20, +12],
+    // Mid-market (comp 1): balanced but lower innovation
+    [+5,  +10, +12, -8,  +8,  +6 ],
+    // Emerging (comp 2): similar innovation, weaker brand & distribution
+    [-4,  -5,  -8,  +4,  -6,  -3 ],
+  ];
+
+  const radar = [
+    { name: bizN, scores: Object.fromEntries(radarAxes.map((k, i) => [k, ourR[i]])), avg: (ourR.reduce((a, b) => a + b) / 6).toFixed(1) },
+    ...compList.map((n, ci) => {
+      const s = ourR.map((v, ai) => Math.min(100, Math.max(5, v + COMP_OFFSETS[ci][ai])));
+      return { name: n, scores: Object.fromEntries(radarAxes.map((k, i) => [k, s[i]])), avg: (s.reduce((a, b) => a + b) / 6).toFixed(1) };
+    }),
+  ];
+
+  // ── 12. TREND DATA ────────────────────────────────────────────
+  // Our trend: starts from 0 at stage 1, has a lag proportional to stage
+  // Competitors: established curves with phase differences per sector
+  const months   = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+  const launchMo = Math.max(0, 4 - stageIdx); // earlier stage = longer to ramp up
+
+  // Our growth curve — steeper if high revenue potential score
+  const growthRate12 = tgtPct * (1 + (safeD(dims.d4) - 50) / 200);
+  const ourTrend = months.map((_, i) =>
+    i < launchMo ? 0 : +((growthRate12 * Math.pow((i - launchMo + 1) / (12 - launchMo), 1.3))).toFixed(1)
+  );
+
+  // Competitor trends: realistic incumbents with slight sector phase offsets
+  // Phase offset prevents all competitors looking identical
+  const c1Base  = rem * spl[0];
+  const c2Base  = rem * spl[1];
+  const c3Base  = rem * spl[2];
+
+  // Phase shift varies by sector so charts look different across sectors
+  const PHASE = { IT:0.7, HC:1.1, FS:0.9, EC:1.3, ED:0.8, MF:1.4, RE:0.6, LG:1.0, ME:1.2, AG:0.5, EN:1.5, OT:1.0 };
+  const ph    = PHASE[sc] || 1.0;
+
+  const c1Trend = months.map((_, i) => +(c1Base * (0.88 + i * 0.008) + Math.sin(i * ph)       * 1.2).toFixed(1));
+  const c2Trend = months.map((_, i) => +(c2Base * (0.84 + i * 0.007) + Math.sin(i * ph + 1.5) * 0.9).toFixed(1));
+  const c3Trend = months.map((_, i) => +(c3Base * (0.80 + i * 0.006) + Math.sin(i * ph + 3.0) * 0.7).toFixed(1));
+
+  // ── 13. GEO REGION PANEL ──────────────────────────────────────
+  const geoRevs = {
+    'Asia Pacific':  { rev: isIndia ? '₹' + Math.round(tamC * 0.45) + 'Cr' : '$' + Math.round(tamC * 0.32) + 'M', pct: isIndia ? '45%' : '32%' },
+    'North America': { rev: '$' + Math.round(tamC * 0.26) + 'M', pct: '26%' },
+    'South America': { rev: '$' + Math.round(tamC * 0.12) + 'M', pct: '12%' },
+    'Europe':        { rev: '€' + Math.round(tamC * 0.21) + 'M', pct: '21%' },
+    'Africa':        { rev: '$' + Math.round(tamC * 0.06) + 'M', pct: '6%'  },
+  };
+
+  // ── 14. DIMENSION SCORES FOR REPORT ──────────────────────────
+  // Use actual dim scores where available; derive from context otherwise
+  const finalDims = {
+    marketSize:      safeD(dims.d1),
+    audienceQuality: safeD(dims.d2),
+    competitionEdge: safeD(dims.d3),
+    revenuePotential:safeD(dims.d4),
+    riskProfile:     dims.d5 !== null ? dims.d5 : riskBase,
+    sectorFit:       safeD(dims.d6),
+  };
+
+  // ── 15. GRADE & VERDICT ───────────────────────────────────────
+  const grade = t >= 75 ? 'Excellent' : t >= 60 ? 'Strong' : t >= 45 ? 'Moderate' : t >= 30 ? 'Needs Work' : 'Critical';
+
+  // Verdict is specific to their inputs, not a generic template
+  const stageLabel  = ['Idea Stage', 'MVP', 'Pilot Stage', 'Paying Customers', 'Scaling'][stageIdx] || 'early stage';
+  const techAngle   = isTech ? 'tech-enabled ' : isDeep ? 'deep-tech ' : '';
+  const opportunity = cities[0] + (cities[1] ? ' and ' + cities[1] : '');
+  const biggestRisk = finalDims.competitionEdge < 45
+    ? `strong incumbents (${compList[0]}) dominate distribution`
+    : finalDims.riskProfile < 45
+    ? `regulatory or execution risk is elevated at ${stageLabel}`
+    : `customer acquisition cost may outpace early revenue`;
+
+  const verdict = `${bizN} is a ${techAngle}${isB2B ? 'B2B' : 'B2C'} play at ${stageLabel} targeting a ₹${tamC}Cr market in ${fd.geo || gc} — strongest opportunity in ${opportunity}, with ${biggestRisk} as the primary challenge.`;
+
+  // ── 16. KEY INSIGHTS (input-driven, no two the same) ──────────
+  const unitEconFocus = sc === 'IT' ? 'NRR above 110% and CAC payback under 6 months'
+    : sc === 'HC' ? 'reimbursement coverage and EHR interoperability'
+    : sc === 'FS' ? 'regulatory capital requirements and FLDG compliance'
+    : sc === 'EC' ? 'gross margin above 30% and return-rate management'
+    : 'LTV:CAC above 3× and gross margins above 60%';
+
+  const compEdgeMsg = finalDims.competitionEdge >= 60
+    ? `Your competition-edge score of ${finalDims.competitionEdge}/100 suggests a credible differentiation — lean into it aggressively in GTM.`
+    : `Your competition-edge score of ${finalDims.competitionEdge}/100 is a concern — ${compList[0]} has significant moats. Identify one dimension where you can be 10× better.`;
+
+  const mktSizeMsg = finalDims.marketSize >= 60
+    ? `Market size signals are strong — the ${fd.sector || sc} sector in ${fd.geo || gc} has ₹${tamC}Cr TAM growing at ${gr}% CAGR.`
+    : `TAM is ${tamC < 200 ? 'niche' : 'moderate'} at ₹${tamC}Cr — validate that SAM of ₹${samC}Cr is truly reachable before scaling.`;
+
+  const keyInsights = [
+    `💡 ${mktSizeMsg}`,
+    `⚔️ ${compEdgeMsg}`,
+    `💰 As a ${fd.bizType || bt} product at ${stageLabel}, focus on ${unitEconFocus}.`,
+    `📍 Revenue density peaks in ${cities[0]} and ${cities[1]} — secure these markets before expanding.`,
+    `✅ 90-day priority: ${stageIdx <= 1
+      ? `validate the problem with 20 customer interviews and set a clear PMF hypothesis`
+      : stageIdx === 2
+      ? `convert 3 pilots to paying contracts and document repeatable sales playbook`
+      : `optimise CAC payback to under ${sc === 'IT' ? '9' : '12'} months and hire a head of sales`}.`,
+  ];
+
+  // ── 17. TOP RISKS (stage + sector specific) ───────────────────
+  const topRisks = [
+    `${SD.compConc === 'consolidated' ? 'Highly consolidated' : 'Well-established'} competition: ${compList[0]} has ${isB2B ? 'deep enterprise relationships' : 'massive brand recall'} — differentiation must be immediately obvious to buyers.`,
+    sc === 'HC' || sc === 'FS'
+      ? `Regulatory timeline: ${sc === 'FS' ? 'RBI / SEBI licensing' : 'CDSCO / NMC compliance'} can add 12–18 months and ₹${Math.round(tamC * 0.005)}Cr in compliance cost.`
+      : isTech
+      ? `Technical debt risk: at ${stageLabel}, engineering shortcuts that enable speed now create scaling bottlenecks at ₹${Math.round(samC * 0.05)}Cr ARR.`
+      : `Customer acquisition cost is typically 40–60% higher than forecast — model 18-month CAC payback before raising.`,
+    `Stage risk: at "${stageLabel}", ${stageIdx <= 1 ? 'building before validating demand is the #1 failure mode — talk to customers first' : stageIdx <= 2 ? 'premature scaling before repeatable sales motion destroys runway' : 'retention becoming as critical as acquisition — churn above 15% will stall growth'}.`,
+  ];
+
+  // ── 18. QUICK WINS (stage + sector + bizType specific) ────────
+  const quickWins = [
+    stageIdx <= 1
+      ? `Interview 20 ${isB2B ? 'decision-makers' : 'target users'} in ${cities[0]} this month — use Jobs-To-Be-Done framework to sharpen your problem statement.`
+      : `Run a pricing experiment: offer 3 pricing tiers to the next 10 prospects and track which tier converts fastest.`,
+    `Build a public teardown of ${compList[0]}'s product — publish it on LinkedIn to establish category expertise and attract early adopters.`,
+    `Set up a weekly North Star metric dashboard (target: ${sc === 'IT' ? 'weekly active users × NRR' : sc === 'FS' ? 'transaction volume × margin' : sc === 'EC' ? 'GMV × repeat-purchase rate' : 'retention × LTV'}) and review every Monday.`,
+  ];
+
+  // ── 19. POPUP TEXTS ──────────────────────────────────────────
+  const popups = {
+    mktshare:  `TAM: ₹${tamC}Cr · SAM: ₹${samC}Cr · SOM: ₹${somC}Cr. ${bizN} targets ${tgtPct}% share — ${compList[0]} (${Math.round(rem * spl[0])}%) and ${compList[1]} (${Math.round(rem * spl[1])}%) are primary share-of-wallet competitors.`,
+    revregion: `${cities[0]} and ${cities[1]} account for ~${Math.round((mults[0] + mults[1]) / mults.reduce((a, b) => a + b) * 100)}% of ${fd.sector || sc} revenue opportunity in ${fd.geo || gc}. ${SD.compConc === 'fragmented' ? 'Market is fragmented — regional dominance is achievable.' : 'Market is concentrated — build defensible local density before expanding.'}`,
+    radar:     `${bizN} leads on innovation (${ourR[3]}/100) vs the market average. ${compList[0]}'s biggest moat is distribution (${Math.min(100, ourR[1] + COMP_OFFSETS[0][1])}/100) — that's the gap to close over the next 12–18 months.`,
+    trend:     `Revenue inflection expected at month ${launchMo + Math.round(t / 20)} post-launch. At ${gr}% CAGR sector growth, each quarter of delay cedes ~₹${Math.round(tamC * gr / 400)}Cr of reachable market.`,
+    geomap:    `${fd.geo || gc} is the primary focus with ${gr}% CAGR tailwind. ${isIndia ? `${cities[0]} and ${cities[2]} have the highest density of ${isB2B ? 'enterprise buyers' : 'target consumers'} in this sector.` : `Prove unit economics in one city before expanding to adjacent markets.`}`,
+  };
+
+  // ── 20. RETURN ───────────────────────────────────────────────
+  return {
+    overallScore:      t,
+    grade,
+    verdict,
+    dimensions:        finalDims,
+    tamCrore:          tamC,
+    samCrore:          samC,
+    somCrore:          somC,
+    growthRate:        gr,
+    currency:          '₹Cr',
+    marketShare:       mshare,
     competitorProfiles:compProfiles,
-    revenueByRegion:{
-      labels:cities,
-      currentMarket:cities.map((_,i)=>+(base*mults[i]*0.72).toFixed(1)),
-      projected2027:cities.map((_,i)=>+(base*mults[i]*(1+gr/100)).toFixed(1)),
-      ourTarget:cities.map((_,i)=>+(base*mults[i]*tgtPct/100*0.85).toFixed(1))
-    },
-    competitorRadar:radar,
-    trendData:{
+    revenueByRegion,
+    competitorRadar:   radar,
+    trendData: {
       months,
-      series:[
-        {label:fd.bizName,   dash:[],data:ourTrend},
-        {label:compList[0],  dash:[],data:c1Trend},
-        {label:compList[1],  dash:[],data:c2Trend},
-        {label:compList[2],  dash:[],data:c3Trend}
-      ]
+      series: [
+        { label: bizN,        dash: [],    data: ourTrend },
+        { label: compList[0], dash: [],    data: c1Trend  },
+        { label: compList[1], dash: [],    data: c2Trend  },
+        { label: compList[2], dash: [],    data: c3Trend  },
+      ],
     },
-    geoRegions:Object.fromEntries(Object.entries(geoRevs).map(([k,v])=>[[k],{rev:v.rev,pct:v.pct,ids:{}}])),
-    keyInsights:[
-      `💡 ${fd.bizName} targets a ₹${Math.round(tamC)}Cr TAM in the ${fd.sector} sector — growing at ~${gr}% CAGR in ${fd.geo}.`,
-      `⚔️ Competing against ${compList[0]} and ${compList[1]} — your primary edge must be 10× better on at least one dimension.`,
-      `💰 As a ${fd.bizType} product, focus on ${sc==='IT'?'NRR above 110% and CAC payback under 6 months':sc==='HC'?'reimbursement coverage and EHR interoperability':'LTV:CAC above 3× and gross margins above 60%'}.`,
-      `📍 Highest revenue density in ${cities[0]} and ${cities[1]} — establish these before geographic expansion.`,
-      `✅ 90-day priority: sign 3 paying pilots, validate pricing at ₹${Math.round(tamC*tgtPct/100/12/100)}K/month, and map the regulatory pathway.`
-    ],
-    topRisks:[
-      `Well-funded competition: ${compList[0]} has significant distribution and brand advantage.`,
-      `${sc==='HC'||sc==='FS'?'Regulatory approval timeline can add 12–24 months to launch in India.':'Customer acquisition cost is typically higher than forecast — budget for 18-month payback.'}`,
-      `Stage risk: at "${fd.stage}", premature scaling before product-market fit is the primary failure mode.`
-    ],
-    quickWins:[
-      `Run 10 structured paid pilot interviews with ${fd.bizType} decision-makers this month.`,
-      `Build a teardown of ${compList[0]}'s product — identify the one dimension where you can decisively win.`,
-      `Define your North Star metric and set up a weekly dashboard to track it.`
-    ],
-    popups:{
-      mktshare:`TAM: ₹${Math.round(tamC)}Cr · SAM: ₹${Math.round(tamC*0.28)}Cr · SOM: ₹${Math.round(tamC*tgtPct/100)}Cr. ${fd.bizName} targets ${tgtPct}% share against ${compList[0]} (${Math.round(rem*0.35)}%) and ${compList[1]} (${Math.round(rem*0.27)}%).`,
-      revregion:`${cities[0]} and ${cities[1]} together represent ~60% of the total ${fd.sector} revenue opportunity in ${fd.geo}. Concentrate GTM energy here for the first 18 months.`,
-      radar:`${fd.bizName} leads on innovation and pricing power vs ${compList[0]} and ${compList[1]}. Distribution reach is the biggest gap — requires 12–18 months to build.`,
-      trend:`Revenue inflection expected at month ${3+Math.round(t/25)} post-launch. Market growing at ${gr}% annually — entering now provides a 2-year head start on new entrants.`,
-      geomap:`${fd.geo} is the primary focus market with ${gr}% CAGR tailwind. ${isIndia?`${cities[0]} and ${cities[2]} have the highest density of ${fd.bizType} buyers.`:`Prove unit economics here before expanding to adjacent geographies.`}`
-    }
+    geoRegions: Object.fromEntries(
+      Object.entries(geoRevs).map(([k, v]) => [k, { rev: v.rev, pct: v.pct, ids: {} }])
+    ),
+    keyInsights,
+    topRisks,
+    quickWins,
+    popups,
   };
 }
 
