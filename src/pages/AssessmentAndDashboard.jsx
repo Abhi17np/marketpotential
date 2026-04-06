@@ -1,9 +1,12 @@
-import { useEffect, useRef } from "react";
+// src/pages/AssessmentAndDashboard.jsx
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useEffect, useRef, useCallback } from "react";
 import { generateAnalysis } from "../lib/gemini";
-import { saveSubmission, uploadScreenshot } from "../lib/db";
-import { supabase } from "../lib/supabase";
+import { exportPdf } from "../lib/exportPdf";
+import { uploadScreenshot, saveScreenshotUrl } from "../lib/db";
 
-// ── Sector / role maps ────────────────────────────────────────
+const IFRAME_ORIGIN = window.location.origin;
+
 const SECTOR_MAP = {
   "Information Technology / SaaS": "IT",
   "Healthcare & Pharma":           "HC",
@@ -16,27 +19,28 @@ const SECTOR_MAP = {
   "Media & Entertainment":         "ME",
   "Agriculture & AgroTech":        "AG",
   "Energy & CleanTech":            "EN",
+  "Other / General":               "OT",
 };
-const ROLE_BIZ_MAP = {
-  "Founder / Co-Founder": "B2B_SME",
-  "CEO / MD":             "B2B_ENT",
-  "CTO / CPO":            "B2B_SME",
-  "CMO / VP Marketing":   "B2C_MASS",
-  "Business Development": "B2B_SME",
-  "Product Manager":      "B2B_SME",
-  "Investor / VC":        "B2B_ENT",
-  "Consultant / Advisor": "B2B_SME",
-  "Other":                "B2B_SME",
+
+const BIZ_TYPE_MAP = {
+  "B2B (Business to Business)": "B2B_SME",
+  "B2C (Business to Consumer)": "B2C_MASS",
+  "B2B2C":                      "B2B_SME",
+  "D2C (Direct to Consumer)":   "B2C_MASS",
+  "Marketplace":                "B2B_SME",
+  "SaaS / Platform":            "B2B_SME",
+  "Other":                      "B2B_SME",
 };
 
 function buildPrefill(userData) {
   return {
-    organization: userData.organization,
-    sectorCode:   SECTOR_MAP[userData.sector]  || "IT",
-    bizTypeCode:  ROLE_BIZ_MAP[userData.role]  || "B2B_SME",
-    geoCode:      userData.geography           || "PI",
-    problem:      userData.problem,
-    stage:        userData.stage,
+    organization: userData.organization ?? "",
+    bizName:      userData.productName  || userData.organization || "",
+    sectorCode:   SECTOR_MAP[userData.sector]         ?? "OT",
+    bizTypeCode:  BIZ_TYPE_MAP[userData.businessType] ?? "B2B_SME",
+    geoCode:      userData.geography ?? "PI",
+    problem:      userData.problem   ?? "",
+    stage:        userData.stage     ?? "",
   };
 }
 
@@ -48,21 +52,104 @@ const LOADER_STEPS = [
   { n: 5, msg: "Assembling your market intelligence dashboard…",          pct: 95 },
 ];
 
-export default function AssessmentAndDashboard({ userData, onRestart }) {
-  // ── Refs (all inside the component) ────────────────────────
+// ── Load html2canvas from CDN once ────────────────────────────────
+function loadHtml2Canvas() {
+  return new Promise((resolve, reject) => {
+    if (window.html2canvas) { resolve(window.html2canvas); return; }
+    const script  = document.createElement("script");
+    script.src    = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    script.onload = () => resolve(window.html2canvas);
+    script.onerror = () => reject(new Error("html2canvas failed to load"));
+    document.head.appendChild(script);
+  });
+}
+
+// ── Take a screenshot of the iframe's visible content ────────────
+async function screenshotIframe(iframeEl) {
+  try {
+    const html2canvas = await loadHtml2Canvas();
+
+    // Try to capture the iframe's inner document directly
+    const iframeDoc = iframeEl.contentDocument || iframeEl.contentWindow?.document;
+
+    let canvas;
+    if (iframeDoc) {
+      // Capture the dashboard section inside the iframe
+      const dashShell = iframeDoc.getElementById("dashShell") || iframeDoc.body;
+      canvas = await html2canvas(dashShell, {
+        useCORS:        true,
+        allowTaint:     true,
+        scale:          1.5,          // higher resolution
+        backgroundColor: "#EEF2F7",
+        logging:        false,
+        width:          iframeDoc.body.scrollWidth,
+        height:         Math.min(iframeDoc.body.scrollHeight, 4000), // cap at 4000px
+        windowWidth:    iframeDoc.body.scrollWidth,
+        windowHeight:   iframeDoc.body.scrollHeight,
+      });
+    } else {
+      // Fallback: capture the iframe element itself from parent
+      canvas = await html2canvas(iframeEl, {
+        useCORS:        true,
+        allowTaint:     true,
+        scale:          1.5,
+        backgroundColor: "#EEF2F7",
+        logging:        false,
+      });
+    }
+
+    // Convert canvas to PNG blob
+    return new Promise(resolve => {
+      canvas.toBlob(blob => resolve(blob), "image/png", 0.92);
+    });
+
+  } catch (err) {
+    console.error("❌ Screenshot capture failed:", err.message);
+    return null;
+  }
+}
+
+export default function AssessmentAndDashboard({ userData, onResult, onRestart }) {
   const iframeRef       = useRef(null);
   const prefillSentRef  = useRef(false);
   const latestResultRef = useRef(null);
   const latestFdRef     = useRef(null);
-  const submissionIdRef = useRef(null);   // stores UUID of saved row for screenshot patch
+  const onResultRef     = useRef(onResult);
+  const onRestartRef    = useRef(onRestart);
+  const userDataRef     = useRef(userData);
+  const submissionIdRef = useRef(null); // passed in via onResult callback from App.jsx
 
-  // ── Post to iframe ─────────────────────────────────────────
-  function postToIframe(msg) {
-    iframeRef.current?.contentWindow?.postMessage(msg, "*");
-  }
+  useEffect(() => { onResultRef.current  = onResult;  }, [onResult]);
+  useEffect(() => { onRestartRef.current = onRestart; }, [onRestart]);
+  useEffect(() => { userDataRef.current  = userData;  }, [userData]);
 
-  // ── Analysis + save ────────────────────────────────────────
-  async function handleSubmit(fd) {
+  const postToIframe = useCallback((msg) => {
+    iframeRef.current?.contentWindow?.postMessage(msg, IFRAME_ORIGIN);
+  }, []);
+
+  // ── After dashboard renders, wait briefly then screenshot ─────
+  const takeAndSaveScreenshot = useCallback(async (submissionId) => {
+    if (!submissionId) return;
+
+    // Wait for charts/maps to fully render inside the iframe
+    await new Promise(r => setTimeout(r, 3500));
+
+    console.log("📸 Taking dashboard screenshot…");
+    const blob = await screenshotIframe(iframeRef.current);
+
+    if (!blob) {
+      console.warn("⚠️ Screenshot blob is null — skipping upload.");
+      return;
+    }
+
+    const url = await uploadScreenshot(submissionId, blob);
+    if (url) {
+      await saveScreenshotUrl(submissionId, url);
+      console.log("✅ Screenshot saved to Supabase:", url);
+    }
+  }, []);
+
+  const handleSubmit = useCallback(async (fd) => {
     latestFdRef.current = fd;
 
     for (const s of LOADER_STEPS) {
@@ -71,84 +158,87 @@ export default function AssessmentAndDashboard({ userData, onRestart }) {
     }
 
     try {
-      const result = await generateAnalysis(userData, fd.answers || {});
+      const result = await generateAnalysis(userDataRef.current, fd.answers ?? {});
       latestResultRef.current = result;
 
-      // Save submission → get back the row UUID
-      const rowId = await saveSubmission({ userData, answers: fd.answers || {}, result });
-      submissionIdRef.current = rowId;
+      // ── Save result + get submissionId back from App.jsx ──────
+      const submissionId = await onResultRef.current?.(fd.answers ?? {}, result);
+      submissionIdRef.current = submissionId;
 
       postToIframe({ type: "INFOPACE_RENDER", fd, analysis: result });
 
+      // ── Take screenshot after dashboard renders ───────────────
+      // We wait for the iframe to finish rendering before capturing
+      takeAndSaveScreenshot(submissionId);
+
     } catch (err) {
       console.error("Analysis failed:", err);
-      postToIframe({ type: "INFOPACE_LOADER_STEP", step: 5, msg: "Running offline analysis…", pct: 95 });
-      // Still save the offline result
-      try {
-        const rowId = await saveSubmission({ userData, answers: fd.answers || {}, result: {} });
-        submissionIdRef.current = rowId;
-      } catch (_) {}
-      setTimeout(() => postToIframe({ type: "INFOPACE_RENDER", fd, analysis: {} }), 800);
+      postToIframe({
+        type: "INFOPACE_LOADER_STEP",
+        step: 5,
+        msg:  "Running offline analysis…",
+        pct:  95,
+      });
+      setTimeout(async () => {
+        const submissionId = await onResultRef.current?.(fd.answers ?? {}, {});
+        postToIframe({ type: "INFOPACE_RENDER", fd, analysis: {} });
+        takeAndSaveScreenshot(submissionId);
+      }, 800);
     }
-  }
+  }, [postToIframe, takeAndSaveScreenshot]);
 
-  // ── Screenshot: upload to Storage + patch submission row ───
-  async function handleScreenshot(buffer, filename) {
-    try {
-      const blob = new Blob([buffer], { type: "image/png" });
+  const handleExportPdf = useCallback(() => {
+    exportPdf({
+      userData: userDataRef.current,
+      answers:  latestFdRef.current?.answers ?? {},
+      result:   latestResultRef.current      ?? {},
+    });
+  }, []);
 
-      // Upload PNG to Supabase Storage bucket "dashboard-screenshots"
-      const screenshotUrl = await uploadScreenshot(blob, filename);
-
-      // Patch the submission row with the URL (if we have the row id)
-      if (submissionIdRef.current) {
-        await supabase
-          .from("submissions")
-          .update({ screenshot_url: screenshotUrl })
-          .eq("id", submissionIdRef.current);
-      }
-
-      console.log("Dashboard screenshot saved:", screenshotUrl);
-    } catch (e) {
-      console.warn("Screenshot upload failed:", e.message);
-    }
-  }
-
-  // ── Message listener ────────────────────────────────────────
   useEffect(() => {
     function handleMessage(event) {
-      if (!event.data) return;
+      if (event.origin !== IFRAME_ORIGIN) return;
+      if (!event.data?.type) return;
 
-      if (event.data.type === "INFOPACE_LOADED") {
-        if (!prefillSentRef.current) {
-          prefillSentRef.current = true;
-          postToIframe({ type: "INFOPACE_PREFILL", userData: buildPrefill(userData) });
-        }
-      }
-
-      if (event.data.type === "INFOPACE_SUBMIT") {
-        handleSubmit(event.data.fd);
-      }
-
-      // Screenshot blob sent from iframe after dashboard renders
-      if (event.data.type === "INFOPACE_SCREENSHOT") {
-        handleScreenshot(event.data.buffer, event.data.filename);
-      }
-
-      if (event.data.type === "INFOPACE_RESET") {
-        onRestart();
+      switch (event.data.type) {
+        case "INFOPACE_LOADED":
+          if (!prefillSentRef.current) {
+            prefillSentRef.current = true;
+            postToIframe({
+              type:     "INFOPACE_PREFILL",
+              userData: buildPrefill(userDataRef.current),
+            });
+          }
+          break;
+        case "INFOPACE_SUBMIT":
+          handleSubmit(event.data.fd);
+          break;
+        case "INFOPACE_EXPORT_PDF":
+          handleExportPdf();
+          break;
+        case "INFOPACE_RESET":
+          onRestartRef.current?.();
+          break;
+        default:
+          break;
       }
     }
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [userData]);
+  }, [handleSubmit, handleExportPdf, postToIframe]);
 
   return (
     <iframe
       ref={iframeRef}
       src="/dashboard.html"
-      style={{ position: "fixed", inset: 0, border: "none", width: "100%", height: "100%" }}
+      style={{
+        position: "fixed",
+        inset:    0,
+        border:   "none",
+        width:    "100%",
+        height:   "100%",
+      }}
       title="Infopace Assessment"
       sandbox="allow-scripts allow-same-origin allow-popups allow-downloads"
     />

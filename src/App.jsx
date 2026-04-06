@@ -1,67 +1,51 @@
-import { useEffect, useState } from "react";
-import { onAuthChange, signOut } from "./lib/auth";
-import AuthPage from "./pages/AuthPage";
+import { useState, useRef } from "react";
 import OnboardingForm from "./pages/OnboardingForm";
 import AssessmentAndDashboard from "./pages/AssessmentAndDashboard";
+import { saveOnboarding, saveResult } from "./lib/db";
+
+// ── Flow:
+//   1. User fills OnboardingForm → onComplete(userData) fires
+//      → saveOnboarding() inserts row into Supabase, returns submissionId
+//   2. User completes dashboard questions → AI generates result
+//      → AssessmentAndDashboard calls onResult(answers, result)
+//      → saveResult() updates the same row with scores + analysis
+// ──────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [authUser,  setAuthUser]  = useState(undefined); // undefined = loading
-  const [userData,  setUserData]  = useState(null);      // onboarding form data
-  const [view,      setView]      = useState("auth");    // "auth" | "onboard" | "dashboard"
+  const [userData, setUserData]       = useState(null);
+  const submissionIdRef               = useRef(null); // holds Supabase row UUID
 
-  // Listen for Supabase auth state changes
-  useEffect(() => {
-    const { data: { subscription } } = onAuthChange(user => {
-      setAuthUser(user);
-      if (!user) {
-        setView("auth");
-        setUserData(null);
-      } else if (view === "auth") {
-        setView("onboard");
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+  // ── Called when onboarding form is submitted ──────────────────
+  async function handleOnboardingComplete(formData) {
+    setUserData(formData);
 
-  // ── Loading splash ───────────────────────────────────────────
-  if (authUser === undefined) {
-    return (
-      <div className="min-h-screen bg-[#EEF2F7] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 bg-[#0091DA] rounded-lg flex items-center justify-center font-mono font-bold text-white text-sm">IP</div>
-          <div className="text-sm text-[#627289]">Loading…</div>
-        </div>
-      </div>
+    // Save to Supabase immediately — non-blocking
+    const id = await saveOnboarding(formData);
+    submissionIdRef.current = id; // store for phase 2
+  }
+
+  // ── Called when AI analysis completes inside the dashboard ────
+  async function handleResult(answers, result) {
+    // Fire-and-forget — don't block the UI
+    saveResult(submissionIdRef.current, answers, result).catch(e =>
+      console.warn("DB result save failed:", e.message)
     );
   }
 
-  // ── Auth page ────────────────────────────────────────────────
-  if (!authUser || view === "auth") {
-    return <AuthPage onAuth={user => { setAuthUser(user); setView("onboard"); }} />;
+  function handleRestart() {
+    setUserData(null);
+    submissionIdRef.current = null;
   }
 
-  // ── Onboarding form ──────────────────────────────────────────
-  if (view === "onboard" || !userData) {
+  if (userData) {
     return (
-      <OnboardingForm
-        user={authUser}
-        onComplete={data => {
-          // Merge auth email into form data
-          setUserData({ ...data, email: data.email || authUser.email });
-          setView("dashboard");
-        }}
+      <AssessmentAndDashboard
+        userData={userData}
+        onResult={handleResult}
+        onRestart={handleRestart}
       />
     );
   }
 
-  // ── Dashboard ────────────────────────────────────────────────
-  return (
-    <AssessmentAndDashboard
-      userData={userData}
-      onRestart={() => {
-        setUserData(null);
-        setView("onboard");
-      }}
-    />
-  );
+  return <OnboardingForm onComplete={handleOnboardingComplete} user={null} />;
 }
