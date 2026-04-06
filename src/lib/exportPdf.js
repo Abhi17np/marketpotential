@@ -24,34 +24,87 @@ function loadHtml2Canvas() {
 async function captureChartsSection(iframeEl) {
   const html2canvas = await loadHtml2Canvas();
   const iframeDoc   = iframeEl?.contentDocument || iframeEl?.contentWindow?.document;
+  const iframeWin   = iframeEl?.contentWindow;
 
   if (!iframeDoc) throw new Error("Cannot access iframe document");
 
-  // Switch to charts view inside the iframe so it is visible before capture
-  const switchFn = iframeEl?.contentWindow?.switchView;
-  if (typeof switchFn === "function") {
-    switchFn("charts");
-    // Give charts a moment to render / resize
-    await new Promise(r => setTimeout(r, 600));
+  // ── Step 1: Switch to charts view ─────────────────────────────────────────
+  if (typeof iframeWin?.switchView === "function") {
+    iframeWin.switchView("charts");
+  }
+  await new Promise(r => setTimeout(r, 300));
+
+  // ── Step 2: Expand iframe to a large fixed viewport so Chart.js canvases
+  //    render at full size (they are sized to the iframe viewport) ──────────
+  const CAPTURE_W = 1600;
+  const CAPTURE_H = 900;
+  const prevW = iframeEl.style.width;
+  const prevH = iframeEl.style.height;
+  iframeEl.style.width  = CAPTURE_W + "px";
+  iframeEl.style.height = CAPTURE_H + "px";
+  await new Promise(r => setTimeout(r, 200));
+
+  // ── Step 3: Force all Chart.js instances to resize to the new viewport ────
+  const charts = iframeWin?.dashCharts || {};
+  Object.values(charts).forEach(ch => { try { ch?.resize?.(); } catch (_) {} });
+
+  // Wait for canvases to finish redrawing
+  await new Promise(r => setTimeout(r, 1000));
+
+  // ── Step 4: #viewCharts is position:fixed — html2canvas can't measure it.
+  //    Temporarily make it position:relative so scroll dimensions are correct.
+  const viewCharts = iframeDoc.getElementById("viewCharts");
+  const sidebar    = iframeDoc.getElementById("outputSidebar");
+  let origVC = null, origSB = null;
+
+  if (viewCharts) {
+    origVC = viewCharts.getAttribute("style") || "";
+    viewCharts.style.cssText = [
+      "position:relative",
+      "left:0",
+      "top:0",
+      "width:" + CAPTURE_W + "px",
+      "height:auto",
+      "overflow:visible",
+      "display:flex",
+      "flex-direction:column",
+    ].join(";");
+  }
+  if (sidebar) {
+    origSB = sidebar.getAttribute("style") || "";
+    sidebar.style.display = "none";
   }
 
-  // Target #viewCharts specifically; fall back to full dashShell or body
-  const target =
-    iframeDoc.getElementById("viewCharts") ||
-    iframeDoc.getElementById("dashShell")  ||
-    iframeDoc.body;
+  await new Promise(r => setTimeout(r, 150));
 
+  const target = viewCharts || iframeDoc.getElementById("dashShell") || iframeDoc.body;
+  const capW   = target.scrollWidth  || CAPTURE_W;
+  const capH   = target.scrollHeight || CAPTURE_H;
+
+  // ── Step 5: Capture ───────────────────────────────────────────────────────
   const canvas = await html2canvas(target, {
     useCORS:         true,
     allowTaint:      true,
-    scale:           2,               // retina quality
+    scale:           2,
     backgroundColor: "#EEF2F7",
     logging:         false,
-    width:           target.scrollWidth,
-    height:          target.scrollHeight,
-    windowWidth:     target.scrollWidth,
-    windowHeight:    target.scrollHeight,
+    width:           capW,
+    height:          capH,
+    windowWidth:     CAPTURE_W,   // must match the viewport we forced above
+    windowHeight:    CAPTURE_H,
+    x: 0,
+    y: 0,
+    ignoreElements: el =>
+      el.id === "outputSidebar" ||
+      el.classList?.contains("sb-btn") ||
+      el.classList?.contains("no-print"),
   });
+
+  // ── Step 6: Restore everything ────────────────────────────────────────────
+  if (viewCharts && origVC !== null) viewCharts.setAttribute("style", origVC);
+  if (sidebar   && origSB !== null) sidebar.setAttribute("style", origSB);
+  iframeEl.style.width  = prevW;
+  iframeEl.style.height = prevH;
 
   return canvas.toDataURL("image/png", 0.95);
 }
