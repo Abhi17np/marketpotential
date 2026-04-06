@@ -17,7 +17,6 @@ function buildPrefill(userData) {
     "Media & Entertainment":         "ME",
     "Agriculture & AgroTech":        "AG",
     "Energy & CleanTech":            "EN",
-    "Other / General":               "OT",
   };
 
   const BIZ_TYPE_MAP = {
