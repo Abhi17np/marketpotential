@@ -6,7 +6,7 @@
 //  3. Open: http://localhost:4000
 // ================================================================
 
-const API_KEY = 'AIzaSyD130ib59Xf-g-x1B7Th1JfrCseyI9eqpo'; // ← paste your Gemini key here
+const API_KEY = '';
 
 // ── Models ──────────────────────────────────────────────────────
 // Flash = fast + free (question generation)
