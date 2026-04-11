@@ -94,7 +94,7 @@ const Flag = ({ code }) => (
 
 // ── Required fields ───────────────────────────────────────────────
 const STEP1_REQUIRED = ["name", "email", "phone", "organization", "role"];
-const STEP2_REQUIRED = ["productName", "businessType", "sector", "geography", "problem", "stage"];
+const STEP2_REQUIRED = ["productName", "businessType", "sector", "geography", "problem", "stage", "consent"];
 
 // ── Validators ────────────────────────────────────────────────────
 const isEmailValid = (email) =>
@@ -128,6 +128,7 @@ export default function OnboardingForm({ onComplete, user }) {
     geography:    "",
     problem:      "",
     stage:        "",
+    consent: false,   
   });
   const [errors, setErrors] = useState({});
 
@@ -188,6 +189,7 @@ export default function OnboardingForm({ onComplete, user }) {
       setStep(2);
     } else {
       const errs = validate(STEP2_REQUIRED);
+      if (!form.consent) errs.consent = "Required";
       if (Object.keys(errs).length) { setErrors(errs); return; }
       setErrors({});
       onComplete({
@@ -208,7 +210,9 @@ export default function OnboardingForm({ onComplete, user }) {
   // ── Shared label style ────────────────────────────────────────
   const lbl = "block text-[11px] font-semibold uppercase tracking-wider text-[#627289] mb-1.5";
 
-  const canProceed    = step === 1 ? isStep1Complete() : isStep2Complete();
+  const canProceed = step === 1
+  ? STEP1_REQUIRED.every(k => form[k]?.trim?.() || form[k]) && isPhoneValid()
+  : STEP2_REQUIRED.every(k => k === "consent" ? form[k] === true : form[k]?.trim?.() || form[k]);
   const phoneHasError = !!errors.phone;
 
   const filteredCountries = COUNTRIES.filter(c =>
@@ -216,6 +220,7 @@ export default function OnboardingForm({ onComplete, user }) {
     c.code.includes(countrySearch)
   );
 
+  
   return (
     <div
       className="min-h-screen bg-[#EEF2F7] flex flex-col"
@@ -532,9 +537,33 @@ export default function OnboardingForm({ onComplete, user }) {
                     {errors.problem && <p className="text-[11px] text-red-500 mt-1">{errors.problem}</p>}
                   </div>
 
+
                 </div>
+            {/* Data Consent */}
+<div className="col-span-1 sm:col-span-2 lg:col-span-3 mt-6">
+  <label className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-all
+    ${errors.consent ? "border-red-400 bg-red-50" : form.consent
+      ? "border-[#00338D] bg-[#EEF2FB]"
+      : "border-[#D6DFED] bg-[#EEF2F7] hover:border-[#00338D]"}`}>
+    <input
+      type="checkbox"
+      checked={form.consent}
+      onChange={e => { set("consent", e.target.checked); clearErr("consent"); }}
+      className="mt-0.5 w-4 h-4 accent-[#00338D] flex-shrink-0"
+    />
+    <span className="text-xs text-[#627289] leading-relaxed">
+      I consent to providing my details for this assessment.{" "}
+      <span className="text-[#00338D] font-semibold">
+        Details will not be shared with third parties for any other purposes.
+      </span>
+    </span>
+  </label>
+  {errors.consent && <p className="text-[11px] text-red-500 mt-1">Please accept the consent to continue.</p>}
+</div>
               </div>
             )}
+
+
 
             {/* ── FOOTER NAV ── */}
             <div className="flex justify-between items-center px-4 sm:px-6 lg:px-8 py-4 border-t border-[#D6DFED] bg-[#EEF2F7]">

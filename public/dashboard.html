@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Infopace — Market Intelligence Platform</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
@@ -61,7 +62,15 @@ body { font-family: 'IBM Plex Sans', sans-serif; color: #243350; }
 .sbtn.done { color: #00A3A1; }
 .snum { width: 17px; height: 17px; border-radius: 50%; border: 1.5px solid currentColor; display: grid; place-items: center; font-size: 9px; font-weight: 700; flex-shrink: 0; }
 .sbtn.active .snum { background: #0091DA; border-color: #0091DA; color: #fff; }
-
+.sbtn:not(.active):not(.done) {
+  cursor: not-allowed;
+  opacity: 0.5;
+  pointer-events: none;
+}
+.sbtn.done {
+  cursor: pointer;
+  pointer-events: all;
+}
 .prog-track { height: 2px; background: #D6DFED; border-radius: 2px; margin-bottom: 24px; overflow: hidden; }
 .prog-fill { height: 100%; background: #0091DA; border-radius: 2px; transition: width .4s ease; }
 
@@ -207,11 +216,11 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
 .hdr-brand { font-size: 12px; font-weight: 700; letter-spacing: .18em; color: #fff; text-transform: uppercase; }
 .hdr-div { width: 1px; height: 22px; background: rgba(255,255,255,.2); margin: 0 16px; }
 .hdr-title { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.95); }
-.hdr-sub { font-size: 7.5px; font-weight: 300; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .07em; max-width: 600px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hdr-sub { font-size: 7.5px; font-weight: 400; color: rgba(255,255,255,.7); text-transform: uppercase; letter-spacing: .07em; max-width: 600px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hdr-stats { display: flex; align-items: center; }
 .hdr-kpi { display: flex; flex-direction: column; align-items: flex-end; padding: 0 14px; border-left: 1px solid rgba(255,255,255,.12); }
 .hdr-kpi-v { font-size: 14px; font-weight: 700; color: #fff; font-family: 'IBM Plex Mono', monospace; line-height: 1; }
-.hdr-kpi-l { font-size: 7px; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .09em; margin-top: 2px; }
+.hdr-kpi-l { font-size: 7px; color: rgba(255,255,255,.7); text-transform: uppercase; letter-spacing: .09em; margin-top: 2px; }
 .hdr-badge { margin-left: 12px; padding: 4px 12px; border: 1px solid rgba(127,222,189,.4); border-radius: 20px; background: rgba(127,222,189,.12); font-size: 9px; font-weight: 700; color: #7FDEBD; letter-spacing: .06em; }
 .hdr-actions { display: flex; gap: 8px; margin-left: 16px; }
 .hdr-btn { padding: 6px 14px; border-radius: 6px; font-family: 'IBM Plex Sans', sans-serif; font-size: 10px; font-weight: 600; cursor: pointer; border: none; letter-spacing: .04em; transition: all .2s; }
@@ -421,15 +430,15 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
     </div>
 
     <div class="steps">
-      <button class="sbtn active" id="sb0" onclick="goTo(0)"><span class="snum">1</span>About</button>
-      <button class="sbtn" id="sb1" onclick="goTo(1)"><span class="snum">2</span>Market</button>
-      <button class="sbtn" id="sb2" onclick="goTo(2)"><span class="snum">3</span>Audience</button>
-      <button class="sbtn" id="sb3" onclick="goTo(3)"><span class="snum">4</span>Competition</button>
-      <button class="sbtn" id="sb4" onclick="goTo(4)"><span class="snum">5</span>Revenue</button>
-      <button class="sbtn" id="sb5" onclick="goTo(5)"><span class="snum">6</span>Risk</button>
-      <button class="sbtn" id="sb6" onclick="goTo(6)"><span class="snum">7</span>GTM</button>
-      <button class="sbtn" id="sb7" onclick="goTo(7)"><span class="snum">8</span>Output</button>
-      <button class="sbtn" id="sb8" onclick="goTo(8)"><span class="snum">9</span><span id="sb8txt">Deep-Dive</span></button>
+      <button class="sbtn active" id="sb0" onclick="goTo(0)" title="About"><span class="snum">1</span>About</button>
+      <button class="sbtn"  id="sb1" onclick="goTo(1)" title="Market"><span class="snum">2</span>Market</button>
+      <button class="sbtn" id="sb2" onclick="goTo(2)" title="Audience"><span class="snum">3</span>Audience</button>
+      <button class="sbtn" id="sb3" onclick="goTo(3)" title="Competition"><span class="snum">4</span>Competition</button>
+      <button class="sbtn" id="sb4" onclick="goTo(4)" title="Revenue"><span class="snum">5</span>Revenue</button>
+      <button class="sbtn" id="sb5" onclick="goTo(5)" title="Risk"><span class="snum">6</span>Risk</button>
+      <button class="sbtn" id="sb6" onclick="goTo(6)"  title="GTM"><span class="snum">7</span>GTM</button>
+      <button class="sbtn" id="sb7" onclick="goTo(7)" title="Output"><span class="snum">8</span>Output</button>
+      <button class="sbtn" id="sb8" onclick="goTo(8)" title="Deep-Dive"><span class="snum">9</span><span id="sb8txt">Deep-Dive</span></button>
     </div>
     <div class="prog-track"><div class="prog-fill" id="progBar" style="width:11.1%"></div></div>
 
@@ -632,18 +641,19 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
       <span class="sb-label">New</span>
     </button>
 
-    <!-- Export -->
-    <button class="sb-btn" onclick="(function(){if(window.parent&&window.parent!==window){window.parent.postMessage({type:'INFOPACE_EXPORT_PDF'},'*');}else{window.print();}})()"  title="Export PDF"
-      style="height:40px;border:none;background:transparent;cursor:pointer;display:flex;flex-direction:row;align-items:center;margin:0 8px 4px;opacity:0.7;">
-      <span class="sb-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      </span>
-      <span class="sb-label">Export PDF</span>
-    </button>
-  </div>
+    <!-- Download Charts -->
+<button class="sb-btn" onclick="downloadChartsAsImage()" title="Download Charts"
+  style="height:40px;border:none;background:transparent;cursor:pointer;display:flex;flex-direction:row;align-items:center;margin:0 8px 4px;opacity:0.7;">
+  <span class="sb-icon">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  </span>
+  <span class="sb-label">Download</span>
+</button>
+
+  </div><!-- end outputSidebar -->
 
   <!-- VIEW 1: CHARTS DASHBOARD -->
-  <div id="viewCharts" style="position:fixed;left:64px;top:0;width:calc(100vw - 64px);height:100vh;overflow:hidden;display:flex;flex-direction:column;">
+  <div id="viewCharts" style="position:fixed;left:64px;top:0;width:calc(100vw - 64px);height:100vh;overflow:hidden;display:flex;flex-direction:column;transition:left 0.3s cubic-bezier(0.4,0,0.2,1),width 0.3s cubic-bezier(0.4,0,0.2,1);">
 <div class="dash">
 
   <!-- HEADER -->
@@ -736,7 +746,7 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
   </div><!-- end viewCharts -->
 
   <!-- VIEW 2: FULL INTELLIGENCE REPORT -->
-  <div id="viewReport" style="width:calc(100vw - 64px);height:100vh;overflow-y:auto;display:none;background:#EEF2F7;position:absolute;left:64px;top:0;">
+  <div id="viewReport" style="width:calc(100vw - 64px);height:100vh;overflow-y:auto;display:none;background:#EEF2F7;position:fixed;left:64px;top:0;transition:left 0.3s cubic-bezier(0.4,0,0.2,1),width 0.3s cubic-bezier(0.4,0,0.2,1);">
     <div id="reportContent" style="max-width:1100px;margin:0 auto;padding:28px 32px 80px;">
       <!-- Report is built dynamically by buildReport() -->
       <div style="text-align:center;padding:80px;color:#9BAABB;">
@@ -757,6 +767,25 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
 </div>
 
 <script>
+/* ══════════════════════════════════════════════════════
+   SIDEBAR HOVER SYNC — keep content panels in sync
+══════════════════════════════════════════════════════ */
+(function(){
+  const SB_COLLAPSED = 64, SB_EXPANDED = 200;
+  function syncViews(w) {
+    const charts = document.getElementById('viewCharts');
+    const report = document.getElementById('viewReport');
+    if (charts) { charts.style.left = w + 'px'; charts.style.width = 'calc(100vw - ' + w + 'px)'; }
+    if (report) { report.style.left = w + 'px'; report.style.width = 'calc(100vw - ' + w + 'px)'; }
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    const sb = document.getElementById('outputSidebar');
+    if (!sb) return;
+    sb.addEventListener('mouseenter', function() { syncViews(SB_EXPANDED); });
+    sb.addEventListener('mouseleave', function() { syncViews(SB_COLLAPSED); });
+  });
+})();
+
 /* ══════════════════════════════════════════════════════
    API key is stored in server.js — no key needed here
 ══════════════════════════════════════════════════════ */
@@ -796,7 +825,9 @@ function pickAIPill(el){
   calcLive();
 }
 
-function goTo(s){
+function goTo(s, fromNav=false){
+  // Block tab-clicking ahead — but allow Next button (fromNav=true)
+  if(!fromNav && s > step) return;
   document.querySelectorAll('.sec').forEach(x=>x.classList.remove('active'));
   document.getElementById('sec'+s).classList.add('active');
   for(let i=0;i<9;i++){const b=document.getElementById('sb'+i);if(!b)continue;b.classList.remove('active','done');if(i<s)b.classList.add('done');}
@@ -809,6 +840,50 @@ function goTo(s){
   document.getElementById('progBar').style.width=((s+1)/9*100)+'%';
   // Update button state based on current section completion
   calcLive();
+}
+async function downloadChartsAsImage() {
+  const chartsDiv = document.getElementById('viewCharts');
+  if (!chartsDiv) return;
+
+  if (typeof html2canvas === 'undefined') {
+    alert('html2canvas not loaded.');
+    return;
+  }
+
+  // Temporarily remove overflow/position constraints so full content is captured
+  const originalOverflow = chartsDiv.style.overflow;
+  const originalPosition = chartsDiv.style.position;
+  const originalWidth = chartsDiv.style.width;
+  const originalHeight = chartsDiv.style.height;
+
+  chartsDiv.style.overflow = 'visible';
+  chartsDiv.style.position = 'relative';
+  chartsDiv.style.width = chartsDiv.scrollWidth + 'px';
+  chartsDiv.style.height = chartsDiv.scrollHeight + 'px';
+
+  const canvas = await html2canvas(chartsDiv, {
+    backgroundColor: '#0d1b2a',
+    useCORS: true,
+    scale: 2,
+    logging: false,
+    width: chartsDiv.scrollWidth,
+    height: chartsDiv.scrollHeight,
+    windowWidth: chartsDiv.scrollWidth,
+    windowHeight: chartsDiv.scrollHeight,
+    scrollX: 0,
+    scrollY: 0,
+  });
+
+  // Restore original styles
+  chartsDiv.style.overflow = originalOverflow;
+  chartsDiv.style.position = originalPosition;
+  chartsDiv.style.width = originalWidth;
+  chartsDiv.style.height = originalHeight;
+
+  const link = document.createElement('a');
+  link.download = 'charts-dashboard.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
 }
 
 function getUnansweredQuestionsInSection(secNum){
@@ -888,7 +963,7 @@ function validateStep0(){
   const hasSector=document.getElementById('sector')?.value;
   const hasBizType=document.getElementById('bizType')?.value;
   const hasGeo=document.getElementById('geo')?.value;
-  const hasProblem=document.getElementById('problem')?.value?.length>20;
+  const hasProblem=document.getElementById('problem')?.value?.trim().length>=20;
   const hasStage=document.querySelector('#stagePills .pill.on');
   const missing=[];
   if(!hasSector)missing.push('Industry Sector');
@@ -931,9 +1006,10 @@ function navigate(d){
     return;
   }
   if(step===0&&n===1&&ctxReady()){
-    generateAIQuestions().then(()=>goTo(1));
+    generateAIQuestions().then(()=>goTo(1, true));
+
   }else{
-    goTo(n);
+    goTo(n, true);
   }
 }
 
@@ -1751,7 +1827,56 @@ const fetchWithRetry=async(url,opts)=>{
   // Return what we got — renderDash has guards for missing fields
   return parsed;
 }
+function showReportPaywall(){
+  const reportEl = document.getElementById('viewReport');
+  reportEl.style.display = 'block';
+  document.getElementById('viewCharts').style.display = 'none';
 
+  // Highlight report button active
+  document.getElementById('btnReport').style.background = 'rgba(255,255,255,0.22)';
+  document.getElementById('btnCharts').style.background = 'transparent';
+
+  reportEl.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#EEF2F7;padding:40px 20px;">
+      <div style="max-width:480px;width:100%;text-align:center;">
+        <!-- Lock icon -->
+        <div style="width:72px;height:72px;background:#00338D;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;box-shadow:0 8px 24px rgba(0,51,141,0.25);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+
+        <div style="font-size:10px;font-weight:700;letter-spacing:.18em;color:#0091DA;text-transform:uppercase;margin-bottom:10px;">Premium Feature</div>
+        <h2 style="font-family:'IBM Plex Sans',sans-serif;font-size:26px;font-weight:700;color:#08152A;margin:0 0 12px;letter-spacing:-.02em;">Full Intelligence Report</h2>
+        <p style="font-size:14px;color:#627289;line-height:1.7;margin:0 0 32px;">
+          Get the complete market analysis — TAM/SAM/SOM breakdown, competitive deep-dive, 90-day execution roadmap, and risk matrix — compiled into a shareable PDF report.
+        </p>
+
+        <!-- Feature list -->
+        <div style="background:#fff;border:1px solid #D6DFED;border-radius:8px;padding:20px 24px;margin-bottom:28px;text-align:left;">
+          ${[
+            '📊 Full TAM · SAM · SOM funnel analysis',
+            '⚔️ Competitor deep-dive with radar scoring',
+            '🗺️ Regional opportunity breakdown',
+            '📅 90-day execution roadmap (Gantt)',
+            '⚠️ Risk matrix & mitigation strategies',
+            '📄 Exportable PDF report',
+          ].map(f => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #EEF2F7;font-size:13px;color:#243350;">${f}</div>`).join('')}
+        </div>
+
+        <!-- CTA buttons -->
+        <a href="mailto:infopaceai@gmail.com?subject=Full Report Access Request&body=Hi, I'd like access to the full market intelligence report for my assessment."
+           style="display:block;background:#00338D;color:#fff;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:700;padding:14px 28px;border-radius:6px;text-decoration:none;margin-bottom:12px;letter-spacing:.04em;">
+          📩 Request Full Report Access
+        </a>
+        <button onclick="switchView('charts')"
+          style="width:100%;background:transparent;border:1px solid #D6DFED;color:#627289;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;padding:12px 28px;border-radius:6px;cursor:pointer;letter-spacing:.03em;">
+          ← Back to Dashboard
+        </button>
+
+        <p style="font-size:11px;color:#9BAABB;margin-top:20px;">Our team typically responds within 24 hours.</p>
+      </div>
+    </div>
+  `;
+}
 /* ══════════════════════════════════════════════════════
    OFFLINE FALLBACK — realistic sector-calibrated values
 ══════════════════════════════════════════════════════ */
@@ -2303,7 +2428,7 @@ function renderDash(fd,a){
   /* ── Header ── */
   const scoreCol=a.overallScore>=55?'#7FDEBD':a.overallScore>=40?'#F5C842':'#FF8080';
   document.getElementById('dhTitle').textContent=`${biz} · Market Potential Assessment`;
-  const liveTag=a.realTimeInsight?' · 🟢 AI-Powered Live Data':' · 🟡 Offline Estimate';
+  const liveTag=a.realTimeInsight?' · 🟢 AI-Powered Live Data':'';
   document.getElementById('dhSub').textContent=`${fd.sector} · ${fd.bizType} · ${fd.geo}${liveTag} · Infopace Management Pvt Ltd`;
   // Smart merge: use AI data where present, fill gaps from offline fallback
   // This means real Gemini data is always shown, nothing is silently replaced
@@ -2930,6 +3055,7 @@ function renderDash(fd,a){
     }catch(e){d3.select('#worldMap').append('text').attr('x',200).attr('y',80).attr('text-anchor','middle').attr('font-size',11).attr('fill','#7A9BB8').text('Map requires internet connection');}
   }
 
+  
   function renderMap(world){
     const wrap=document.getElementById('mapWrap');
     const tip=document.getElementById('mapTT');
@@ -3167,6 +3293,10 @@ window.addEventListener('message', function(event) {
     const prob = document.getElementById('problem');
     if (prob) prob.value = u.problem || '';
 
+    const probLen = (u.problem||'').trim().length;
+const counter = document.getElementById('probCounter');
+if (counter) { counter.textContent = probLen + ' / 20'; counter.style.color = probLen >= 20 ? '#00A3A1' : '#9BAABB'; }
+
     // Stage pill
     if (u.stage) {
       const pill = document.querySelector(`#stagePills .pill[data-val="${u.stage}"]`);
@@ -3216,6 +3346,10 @@ window.addEventListener('load', function() {
    VIEW SWITCHER
 ══════════════════════════════════════════════════════ */
 function switchView(v){
+  if(v === 'report'){
+    showReportPaywall();
+    return;
+  }
   const isCharts=v==='charts';
   const vc=document.getElementById('viewCharts');
   const vr=document.getElementById('viewReport');
@@ -3300,16 +3434,18 @@ function buildReport(){
 
     // Score gauge — clean minimal
     function scoreGaugeSVG(score,W,H){
-      const cx=W/2, cy=100, R=72, sw=12;
+      const cx=W/2, cy=88, R=68, sw=13;
       const pct=Math.max(0,Math.min(100,score))/100;
       const arcColor=score>=70?'#10B981':score>=50?'#F59E0B':'#EF4444';
       const gradId='g'+Math.random().toString(36).slice(2,6);
       // Arc endpoints: left=180deg, right=0deg, going clockwise (bottom open)
       const sx=cx-R, sy=cy;
       const ex=cx+R, ey=cy;
-      const scX=cx+R*Math.cos(Math.PI*(1-pct));
-      const scY=cy-R*Math.sin(Math.PI*pct);
+      const angle = Math.PI - pct * Math.PI;
+const scX = cx + R * Math.cos(angle);
+const scY = cy - R * Math.sin(angle);
       const lg=pct>0.5?1:0;
+      
       // Grade label
       const grade=score>=70?'Strong':score>=50?'Moderate':'Needs Work';
       return `<svg width="${W}" height="118" viewBox="0 0 ${W} 118" style="display:block;overflow:visible;">
@@ -3326,8 +3462,8 @@ function buildReport(){
         <path d="M${sx},${sy} A${R},${R} 0 ${lg},1 ${scX},${scY}"
               fill="none" stroke="url(#${gradId})" stroke-width="${sw}" stroke-linecap="round"/>
         <!-- 0 and 100 end labels -->
-        <text x="${sx-8}" y="${sy+5}" text-anchor="end" font-size="9" fill="rgba(255,255,255,0.3)" font-family="'IBM Plex Mono',monospace">0</text>
-        <text x="${ex+8}" y="${ey+5}" text-anchor="start" font-size="9" fill="rgba(255,255,255,0.3)" font-family="'IBM Plex Mono',monospace">100</text>
+        <text x="${sx-4}" y="${sy+16}" text-anchor="end" font-size="9" fill="rgba(255,255,255,0.3)" font-family="'IBM Plex Mono',monospace">0</text>
+        <text x="${ex+4}" y="${ey+16}" text-anchor="start" font-size="9" fill="rgba(255,255,255,0.3)" font-family="'IBM Plex Mono',monospace">100</text>
         <!-- Centre tick at 50 -->
         <line x1="${cx}" y1="${cy-R-sw/2-2}" x2="${cx}" y2="${cy-R+sw/2+2}" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
         <text x="${cx}" y="${cy-R-sw/2-6}" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.2)" font-family="'IBM Plex Mono',monospace">50</text>
@@ -3337,9 +3473,9 @@ function buildReport(){
         <circle cx="${cx}" cy="${cy}" r="5" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
         <circle cx="${cx}" cy="${cy}" r="2.5" fill="rgba(255,255,255,0.8)"/>
         <!-- Score -->
-        <text x="${cx}" y="${cy-18}" text-anchor="middle" font-family="'IBM Plex Mono',monospace"
+        <text x="${cx}" y="${cy-22}" text-anchor="middle" font-family="'IBM Plex Mono',monospace"
               font-size="34" font-weight="700" fill="${arcColor}">${score}</text>
-        <text x="${cx}" y="${cy-3}" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif"
+        <text x="${cx}" y="${cy-38}" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif"
               font-size="8.5" fill="rgba(255,255,255,0.35)" letter-spacing=".12em">OUT OF 100</text>
       </svg>`;
     }
@@ -3392,23 +3528,31 @@ function buildReport(){
         const path = `M${tlx},${y} L${trx},${y} L${brx},${y+SEG} L${blx},${y+SEG} Z`;
         const my = y + SEG/2;
 
+        // Connector anchors from the mid-right edge of each trapezoid
+        const midRightX = (trx + brx) / 2;  // average of top-right and bottom-right at mid-height
+        const dotX = midRightX + 4;
+
         // Label block on the right
         const lmy = my;
         const labelLines = s.desc.match(/.{1,44}(\s|$)/g) || [s.desc];
+
+        // For very narrow bottom segment (SOM), keep text inside if it fits, else abbreviate
+        const innerLabel = s.tw > 60 ? `${s.l} · ${s.pct}% of TAM` : s.l;
+        const innerFontSize = s.tw > 80 ? 9 : 8;
 
         return `
           <!-- segment ${i} -->
           <path d="${path}" fill="${s.c}" opacity="0.85"/>
           <path d="${path}" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.2"/>
           <!-- value -->
-          <text x="${cx}" y="${my - 9}" text-anchor="middle"
-                font-family="'IBM Plex Mono',monospace" font-size="15" font-weight="700" fill="#fff">${fmtV(s.v)}</text>
+          <text x="${cx}" y="${my - 7}" text-anchor="middle"
+                font-family="'IBM Plex Mono',monospace" font-size="${i === 2 ? 12 : 15}" font-weight="700" fill="#fff">${fmtV(s.v)}</text>
           <!-- label + pct -->
           <text x="${cx}" y="${my + 8}" text-anchor="middle"
-                font-family="'IBM Plex Sans',sans-serif" font-size="9" fill="rgba(255,255,255,0.8)">${s.l} &nbsp;·&nbsp; ${s.pct}% of TAM</text>
-          <!-- connector dot + line -->
-          <circle cx="${FW + 6}" cy="${lmy}" r="4" fill="${s.c}"/>
-          <line x1="${FW + 10}" y1="${lmy}" x2="${LX - 4}" y2="${lmy}" stroke="${s.c}" stroke-width="1.5" stroke-dasharray="3,2"/>
+                font-family="'IBM Plex Sans',sans-serif" font-size="${innerFontSize}" fill="rgba(255,255,255,0.85)">${innerLabel}</text>
+          <!-- connector dot + line — anchored from actual trapezoid right edge -->
+          <circle cx="${dotX}" cy="${lmy}" r="4" fill="${s.c}"/>
+          <line x1="${dotX + 4}" y1="${lmy}" x2="${LX - 4}" y2="${lmy}" stroke="${s.c}" stroke-width="1.5" stroke-dasharray="3,2"/>
           <!-- right label -->
           <text x="${LX}" y="${lmy - 14}" font-family="'IBM Plex Sans',sans-serif"
                 font-size="10" font-weight="700" fill="${s.c}">${s.title}</text>
@@ -3581,7 +3725,7 @@ function buildReport(){
           Infopace Management Pvt Ltd &nbsp;·&nbsp; Market Intelligence Platform
         </div>
         <div style="font-size:42px;font-weight:700;color:#F8FAFC;line-height:1.0;letter-spacing:-.03em;margin-bottom:12px;">${esc(biz)}</div>
-        <div style="font-size:13px;color:rgba(148,163,184,.7);margin-bottom:24px;letter-spacing:.02em;">${esc(fd.sector)} &nbsp;&nbsp;/&nbsp;&nbsp; ${esc(fd.bizType)} &nbsp;&nbsp;/&nbsp;&nbsp; ${esc(fd.geo)}</div>
+        <div style="font-size:13px;color:rgba(148,163,184,.85);margin-bottom:24px;letter-spacing:.02em;">${esc(fd.sector)} &nbsp;&nbsp;/&nbsp;&nbsp; ${esc(fd.bizType)} &nbsp;&nbsp;/&nbsp;&nbsp; ${esc(fd.geo)}</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
           ${[
             {t:a.grade||'—',bg:'rgba(255,255,255,.08)',c:'#F1F5F9',b:'rgba(255,255,255,.12)'},
@@ -3595,7 +3739,7 @@ function buildReport(){
       <!-- Gauge card -->
       <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:22px 16px 16px;text-align:center;">
         ${scoreGaugeSVG(a.overallScore, 220, 118)}
-        <div style="font-size:10px;color:rgba(148,163,184,.5);text-transform:uppercase;letter-spacing:.14em;margin-top:8px;">Market Potential</div>
+        <div style="font-size:10px;color:rgba(148,163,184,.8);text-transform:uppercase;letter-spacing:.14em;margin-top:8px;">Market Potential</div>
         <div style="font-size:13px;font-weight:700;color:${sCol};margin-top:5px;letter-spacing:.03em;">${a.grade||''} Opportunity</div>
       </div>
     </div>
@@ -3609,7 +3753,7 @@ function buildReport(){
         {l:'Sector CAGR',v:'+'+a.growthRate+'%',sub:'Annual'},
         {l:'Report Date',v:now,sub:'Generated'},
       ].map((k,i)=>`<div style="padding:18px ${i>0?'0 18px 18px':'18px 18px 18px 0'};${i>0?'border-left:1px solid rgba(255,255,255,.06);padding-left:20px;':''}">
-        <div style="font-size:7.5px;color:rgba(148,163,184,.4);text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px;">${k.l} · ${k.sub}</div>
+        <div style="font-size:7.5px;color:rgba(148,163,184,.75);text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px;">${k.l} · ${k.sub}</div>
         <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;color:#E2E8F0;">${k.v}</div>
       </div>`).join('')}
     </div>
