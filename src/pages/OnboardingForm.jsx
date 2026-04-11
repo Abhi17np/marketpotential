@@ -1,596 +1,939 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
-// ── SECTORS ──────────────────────────────────────────────────────
+// ─── DATA ────────────────────────────────────────────────────────────────────
+
 const SECTORS = [
-  "Information Technology / SaaS",
-  "Healthcare & Pharma",
-  "Financial Services / FinTech",
-  "E-Commerce & Retail",
-  "Education & EdTech",
-  "Manufacturing",
-  "Real Estate & PropTech",
-  "Logistics & Supply Chain",
-  "Media & Entertainment",
-  "Agriculture & AgroTech",
-  "Energy & CleanTech",
+  "Information Technology / SaaS","Healthcare & Pharma","Financial Services / FinTech",
+  "E-Commerce & Retail","Education & EdTech","Manufacturing","Real Estate & PropTech",
+  "Logistics & Supply Chain","Media & Entertainment","Agriculture & AgroTech","Energy & CleanTech",
 ];
-
-// ── GEOGRAPHIES ───────────────────────────────────────────────────
 const GEO = [
-  { v: "T1",  l: "India — Tier 1 Cities" },
-  { v: "T2",  l: "India — Tier 2 & 3 Cities" },
-  { v: "PI",  l: "Pan India" },
-  { v: "SA",  l: "South Asia (SAARC)" },
-  { v: "SE",  l: "Southeast Asia" },
-  { v: "MEA", l: "Middle East & Africa" },
-  { v: "EU",  l: "Europe" },
-  { v: "NA",  l: "North America" },
-  { v: "GL",  l: "Global" },
+  { v:"T1", l:"India — Tier 1 Cities" },{ v:"T2", l:"India — Tier 2 & 3 Cities" },
+  { v:"PI", l:"Pan India" },{ v:"SA", l:"South Asia (SAARC)" },
+  { v:"SE", l:"Southeast Asia" },{ v:"MEA", l:"Middle East & Africa" },
+  { v:"EU", l:"Europe" },{ v:"NA", l:"North America" },{ v:"GL", l:"Global" },
 ];
-
-// ── BUSINESS TYPES ────────────────────────────────────────────────
-const BUSINESS_TYPES = [
-  "B2B (Business to Business)",
-  "B2C (Business to Consumer)",
-  "B2B2C",
-  "D2C (Direct to Consumer)",
-  "Marketplace",
-  "SaaS / Platform",
-];
-
+const BUSINESS_TYPES = ["B2B","B2C","B2B2C","D2C","Marketplace","SaaS / Platform"];
 const ROLES = [
-  "Founder / Co-Founder", "CEO / MD", "CTO / CPO",
-  "CMO / VP Marketing", "Business Development",
-  "Product Manager", "Investor / VC", "Consultant / Advisor", "Other",
+  "Founder / Co-Founder","CEO / MD","CTO / CPO","CMO / VP Marketing",
+  "Business Development","Product Manager","Investor / VC","Consultant / Advisor","Other",
+];
+const TEAM_SIZES = ["Solo","2–5","6–15","16–50","51–200","200+"];
+const STAGES     = ["Idea Stage","MVP / Prototype","Live Pilots","Paying Customers","Scaling"];
+const COUNTRIES  = [
+  { code:"+91",  flag:"in", name:"India",       length:10, pattern:/^[6-9]\d{9}$/,   placeholder:"9876543210",  hint:"10 digits, starts 6–9" },
+  { code:"+1",   flag:"us", name:"USA",          length:10, pattern:/^[2-9]\d{9}$/,   placeholder:"2025550123",  hint:"10 digits" },
+  { code:"+1",   flag:"ca", name:"Canada",       length:10, pattern:/^[2-9]\d{9}$/,   placeholder:"4165550123",  hint:"10 digits" },
+  { code:"+44",  flag:"gb", name:"UK",           length:10, pattern:/^[1-9]\d{9}$/,   placeholder:"7911123456",  hint:"10 digits" },
+  { code:"+61",  flag:"au", name:"Australia",    length:9,  pattern:/^[2-9]\d{8}$/,   placeholder:"412345678",   hint:"9 digits" },
+  { code:"+971", flag:"ae", name:"UAE",          length:9,  pattern:/^5\d{8}$/,       placeholder:"501234567",   hint:"9 digits, starts 5" },
+  { code:"+966", flag:"sa", name:"Saudi Arabia", length:9,  pattern:/^5\d{8}$/,       placeholder:"512345678",   hint:"9 digits, starts 5" },
+  { code:"+65",  flag:"sg", name:"Singapore",    length:8,  pattern:/^[689]\d{7}$/,   placeholder:"91234567",    hint:"8 digits" },
+  { code:"+60",  flag:"my", name:"Malaysia",     length:9,  pattern:/^1\d{8}$/,       placeholder:"123456789",   hint:"9 digits" },
+  { code:"+49",  flag:"de", name:"Germany",      length:10, pattern:/^[1-9]\d{9}$/,   placeholder:"1512345678",  hint:"10 digits" },
+  { code:"+33",  flag:"fr", name:"France",       length:9,  pattern:/^[1-9]\d{8}$/,   placeholder:"612345678",   hint:"9 digits" },
+  { code:"+81",  flag:"jp", name:"Japan",        length:10, pattern:/^[789]\d{9}$/,   placeholder:"9012345678",  hint:"10 digits" },
+  { code:"+86",  flag:"cn", name:"China",        length:11, pattern:/^1[3-9]\d{9}$/,  placeholder:"13812345678", hint:"11 digits" },
+  { code:"+55",  flag:"br", name:"Brazil",       length:11, pattern:/^[1-9]\d{10}$/,  placeholder:"11912345678", hint:"11 digits" },
+  { code:"+27",  flag:"za", name:"South Africa", length:9,  pattern:/^[6-8]\d{8}$/,   placeholder:"712345678",   hint:"9 digits" },
+  { code:"+234", flag:"ng", name:"Nigeria",      length:10, pattern:/^[7-9]\d{9}$/,   placeholder:"8012345210",  hint:"10 digits" },
+  { code:"+880", flag:"bd", name:"Bangladesh",   length:10, pattern:/^1\d{9}$/,       placeholder:"1812345678",  hint:"10 digits" },
+  { code:"+92",  flag:"pk", name:"Pakistan",     length:10, pattern:/^3\d{9}$/,       placeholder:"3012345678",  hint:"10 digits" },
 ];
 
-const TEAM_SIZES = ["Solo / 1", "2-5", "6-15", "16-50", "51-200", "200+"];
-
-const STAGES = [
-  "Idea Stage", "MVP / Prototype", "Live Pilots",
-  "Paying Customers", "Scaling / Growth",
+const STATS = [
+  { value:"2,400+", label:"Assessments delivered" },
+  { value:"94%",    label:"Accuracy rate"          },
+  { value:"48 hrs", label:"Average time saved"     },
+];
+const FEATURES = [
+  "TAM / SAM / SOM breakdown",
+  "Competitor intelligence",
+  "12-month revenue projections",
+  "Geographic opportunity map",
+  "90-day execution roadmap",
 ];
 
-const COUNTRIES = [
-  { code: "+91",  flag: "in", name: "India",        length: 10, pattern: /^[6-9]\d{9}$/,   placeholder: "9876543210",  hint: "10 digits, starting with 6–9" },
-  { code: "+1",   flag: "us", name: "USA",           length: 10, pattern: /^[2-9]\d{9}$/,   placeholder: "2025550123",  hint: "10 digits, starting with 2–9" },
-  { code: "+1",   flag: "ca", name: "Canada",        length: 10, pattern: /^[2-9]\d{9}$/,   placeholder: "4165550123",  hint: "10 digits, starting with 2–9" },
-  { code: "+44",  flag: "gb", name: "UK",            length: 10, pattern: /^[1-9]\d{9}$/,   placeholder: "7911123456",  hint: "10 digits" },
-  { code: "+61",  flag: "au", name: "Australia",     length: 9,  pattern: /^[2-9]\d{8}$/,   placeholder: "412345678",   hint: "9 digits, starting with 2–9" },
-  { code: "+971", flag: "ae", name: "UAE",           length: 9,  pattern: /^5\d{8}$/,       placeholder: "501234567",   hint: "9 digits, starting with 5" },
-  { code: "+966", flag: "sa", name: "Saudi Arabia",  length: 9,  pattern: /^5\d{8}$/,       placeholder: "512345678",   hint: "9 digits, starting with 5" },
-  { code: "+65",  flag: "sg", name: "Singapore",     length: 8,  pattern: /^[689]\d{7}$/,   placeholder: "91234567",    hint: "8 digits, starting with 6/8/9" },
-  { code: "+60",  flag: "my", name: "Malaysia",      length: 9,  pattern: /^1\d{8}$/,       placeholder: "123456789",   hint: "9 digits, starting with 1" },
-  { code: "+49",  flag: "de", name: "Germany",       length: 10, pattern: /^[1-9]\d{9}$/,   placeholder: "1512345678",  hint: "10 digits" },
-  { code: "+33",  flag: "fr", name: "France",        length: 9,  pattern: /^[1-9]\d{8}$/,   placeholder: "612345678",   hint: "9 digits" },
-  { code: "+81",  flag: "jp", name: "Japan",         length: 10, pattern: /^[789]\d{9}$/,   placeholder: "9012345678",  hint: "10 digits, starting with 7–9" },
-  { code: "+86",  flag: "cn", name: "China",         length: 11, pattern: /^1[3-9]\d{9}$/,  placeholder: "13812345678", hint: "11 digits, starting with 13–19" },
-  { code: "+82",  flag: "kr", name: "South Korea",   length: 10, pattern: /^1\d{9}$/,       placeholder: "1012345678",  hint: "10 digits, starting with 1" },
-  { code: "+55",  flag: "br", name: "Brazil",        length: 11, pattern: /^[1-9]\d{10}$/,  placeholder: "11912345678", hint: "11 digits" },
-  { code: "+27",  flag: "za", name: "South Africa",  length: 9,  pattern: /^[6-8]\d{8}$/,   placeholder: "712345678",   hint: "9 digits, starting with 6–8" },
-  { code: "+234", flag: "ng", name: "Nigeria",       length: 10, pattern: /^[7-9]\d{9}$/,   placeholder: "8012345210",  hint: "10 digits, starting with 7–9" },
-  { code: "+254", flag: "ke", name: "Kenya",         length: 9,  pattern: /^7\d{8}$/,       placeholder: "712345678",   hint: "9 digits, starting with 7" },
-  { code: "+880", flag: "bd", name: "Bangladesh",    length: 10, pattern: /^1\d{9}$/,       placeholder: "1812345678",  hint: "10 digits, starting with 1" },
-  { code: "+92",  flag: "pk", name: "Pakistan",      length: 10, pattern: /^3\d{9}$/,       placeholder: "3012345678",  hint: "10 digits, starting with 3" },
-  { code: "+94",  flag: "lk", name: "Sri Lanka",     length: 9,  pattern: /^7\d{8}$/,       placeholder: "712345678",   hint: "9 digits, starting with 7" },
-  { code: "+977", flag: "np", name: "Nepal",         length: 10, pattern: /^9\d{9}$/,       placeholder: "9812345678",  hint: "10 digits, starting with 9" },
-  { code: "+31",  flag: "nl", name: "Netherlands",   length: 9,  pattern: /^6\d{8}$/,       placeholder: "612345678",   hint: "9 digits, starting with 6" },
-  { code: "+7",   flag: "ru", name: "Russia",        length: 10, pattern: /^9\d{9}$/,       placeholder: "9123456789",  hint: "10 digits, starting with 9" },
-];
+// ─── VALIDATION ──────────────────────────────────────────────────────────────
+const isEmailValid    = v => /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(v);
+const isPhoneValidFor = (ph, c) => c.pattern.test(ph) && !/^(\d)\1+$/.test(ph);
+const FIELD_LABELS    = {
+  name:"Full name", email:"Email", phone:"Phone", organization:"Organization", role:"Role",
+  productName:"Product name", businessType:"Business type", sector:"Industry sector",
+  geography:"Target geography", problem:"Problem statement", stage:"Stage",
+};
+const STEP1 = ["name","email","phone","organization","role"];
+const STEP2 = ["productName","businessType","sector","geography","problem","stage"];
 
-// ── Flag image component — works on ALL OS including Windows ──────
-// Uses flagcdn.com which renders real PNG flags, no emoji needed
-const Flag = ({ code }) => (
-  <img
-    src={`https://flagcdn.com/20x15/${code}.png`}
-    srcSet={`https://flagcdn.com/40x30/${code}.png 2x`}
-    width="20"
-    height="15"
-    alt={code}
-    style={{ borderRadius: 2, flexShrink: 0, display: "inline-block" }}
-    onError={e => { e.target.style.display = "none"; }}
-  />
-);
+// ─── DESIGN TOKENS ───────────────────────────────────────────────────────────
+const C = {
+  // Core blues
+  blue900:  "#0A1628",
+  blue800:  "#0D2240",
+  blue700:  "#0F3460",
+  blue600:  "#1144A0",
+  blue500:  "#1a56db",
+  blue400:  "#3b82f6",
+  blue300:  "#93c5fd",
+  blue200:  "#bfdbfe",
+  blue100:  "#dbeafe",
+  blue50:   "#eff6ff",
 
-// ── Required fields ───────────────────────────────────────────────
-const STEP1_REQUIRED = ["name", "email", "phone", "organization", "role"];
-const STEP2_REQUIRED = ["productName", "businessType", "sector", "geography", "problem", "stage", "consent"];
+  // Surface
+  surface:  "#F0F4FF",
+  white:    "#FFFFFF",
 
-// ── Validators ────────────────────────────────────────────────────
-const isEmailValid = (email) =>
-  /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email);
+  // Text
+  textPrimary:   "#0A1628",
+  textSecondary: "#475569",
+  textMuted:     "#94a3b8",
+  textOnDark:    "#FFFFFF",
 
-function isPhoneValidFor(phone, country) {
-  if (!country.pattern.test(phone)) return false;
-  if (/^(\d)\1+$/.test(phone)) return false; // all same digits
-  const seq  = "01234567890123456789";
-  const rseq = "98765432109876543210";
-  if (seq.includes(phone) || rseq.includes(phone)) return false;
-  return true;
+  // Borders
+  border:       "rgba(17,68,160,0.15)",
+  borderDark:   "rgba(17,68,160,0.3)",
+
+  // Error
+  errText:   "#be123c",
+  errBg:     "#fff1f2",
+  errBorder: "#fda4af",
+
+  // Fonts
+  mono:  "'IBM Plex Mono', monospace",
+  serif: "'Playfair Display', Georgia, serif",
+  sans:  "'Inter', 'DM Sans', system-ui, sans-serif",
+};
+
+// ─── ANIMATED BACKGROUND CANVAS ──────────────────────────────────────────────
+function AnimatedBackground() {
+  const canvasRef = useRef(null);
+  const mouseRef  = useRef({ x: -9999, y: -9999, vx: 0, vy: 0, px: -9999, py: -9999 });
+  const rafRef    = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let W = 0, H = 0;
+
+    function resize() {
+      W = canvas.width  = canvas.offsetWidth;
+      H = canvas.height = canvas.offsetHeight;
+      buildGrid();
+    }
+
+    // ── Mouse tracking ──
+    const onMove = e => {
+      const r = canvas.getBoundingClientRect();
+      const mx = e.clientX - r.left;
+      const my = e.clientY - r.top;
+      mouseRef.current.vx = mx - mouseRef.current.x;
+      mouseRef.current.vy = my - mouseRef.current.y;
+      mouseRef.current.x  = mx;
+      mouseRef.current.y  = my;
+    };
+    window.addEventListener("mousemove", onMove);
+
+    // ── Grid of nodes for "ripple field" effect ──
+    const COLS = 18, ROWS = 12;
+    let nodes = [];
+    function buildGrid() {
+      nodes = [];
+      for (let r = 0; r <= ROWS; r++) {
+        for (let c = 0; c <= COLS; c++) {
+          nodes.push({
+            ox: (c / COLS) * W,
+            oy: (r / ROWS) * H,
+            x:  (c / COLS) * W,
+            y:  (r / ROWS) * H,
+            vx: 0, vy: 0,
+            phase: Math.random() * Math.PI * 2,
+          });
+        }
+      }
+    }
+    buildGrid();
+    resize();
+    window.addEventListener("resize", resize);
+
+    // ── Floating orbs that react to cursor ──
+    const ORBS = Array.from({ length: 5 }, (_, i) => ({
+      x:    Math.random() * W,
+      y:    Math.random() * H,
+      r:    180 + i * 60,
+      vx:   (Math.random() - 0.5) * 0.25,
+      vy:   (Math.random() - 0.5) * 0.2,
+      tx:   0, ty: 0,
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.0003 + Math.random() * 0.0002,
+    }));
+
+    // ── Ripple trails ──
+    const ripples = [];
+
+    // ── Beam streaks from cursor movement ──
+    const streaks = [];
+
+    let t = 0;
+    let prevSpeed = 0;
+
+    function draw() {
+      const m = mouseRef.current;
+      const speed = Math.sqrt(m.vx * m.vx + m.vy * m.vy);
+      const smoothSpeed = prevSpeed * 0.85 + speed * 0.15;
+      prevSpeed = smoothSpeed;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // ── 1. Ambient orbs ──
+      ORBS.forEach((orb, i) => {
+        // Cursor attraction
+        if (m.x > 0) {
+          const dx = m.x - orb.x, dy = m.y - orb.y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          const force = Math.min(0.4, 120 / (dist + 80));
+          orb.vx += dx * force * 0.0006;
+          orb.vy += dy * force * 0.0006;
+        }
+        orb.vx *= 0.97; orb.vy *= 0.97;
+        // gentle drift
+        orb.vx += (Math.random() - 0.5) * 0.03;
+        orb.vy += (Math.random() - 0.5) * 0.03;
+        orb.x += orb.vx; orb.y += orb.vy;
+        if (orb.x < -orb.r) orb.x = W + orb.r;
+        if (orb.x > W + orb.r) orb.x = -orb.r;
+        if (orb.y < -orb.r) orb.y = H + orb.r;
+        if (orb.y > H + orb.r) orb.y = -orb.r;
+
+        const breathe = 1 + 0.07 * Math.sin(t * orb.speed * 5000 + orb.phase);
+        const rr = orb.r * breathe;
+
+        const grd = ctx.createRadialGradient(orb.x, orb.y, 0, orb.x, orb.y, rr);
+        const alpha = 0.035 + 0.015 * Math.sin(t * orb.speed * 3000 + orb.phase);
+        grd.addColorStop(0, `rgba(26,86,219,${alpha + 0.02})`);
+        grd.addColorStop(0.5, `rgba(17,68,160,${alpha})`);
+        grd.addColorStop(1, "rgba(17,68,160,0)");
+        ctx.beginPath();
+        ctx.arc(orb.x, orb.y, rr, 0, Math.PI * 2);
+        ctx.fillStyle = grd;
+        ctx.fill();
+      });
+
+      // ── 2. Grid mesh — distorted by cursor ──
+      const W_COLS = COLS + 1, W_ROWS = ROWS + 1;
+      nodes.forEach(n => {
+        if (m.x > 0) {
+          const dx = m.x - n.ox, dy = m.y - n.oy;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          const influence = Math.exp(-dist * dist / (2 * 160 * 160));
+          // push nodes away from cursor in a wave
+          const wave = Math.sin(dist * 0.025 - t * 0.07) * influence;
+          n.tx = n.ox - dx * 0.08 * influence + m.vx * 0.12 * influence;
+          n.ty = n.oy - dy * 0.08 * influence + m.vy * 0.12 * influence;
+          // gentle idle oscillation
+          n.tx += Math.sin(t * 0.015 + n.phase) * 3;
+          n.ty += Math.cos(t * 0.013 + n.phase * 1.3) * 3;
+        } else {
+          n.tx = n.ox + Math.sin(t * 0.015 + n.phase) * 3;
+          n.ty = n.oy + Math.cos(t * 0.013 + n.phase * 1.3) * 3;
+        }
+        n.x += (n.tx - n.x) * 0.08;
+        n.y += (n.ty - n.y) * 0.08;
+      });
+
+      // Draw grid lines
+      ctx.lineWidth = 0.4;
+      for (let r = 0; r < W_ROWS; r++) {
+        for (let c = 0; c < W_COLS; c++) {
+          const n = nodes[r * W_COLS + c];
+          // horizontal
+          if (c < COLS) {
+            const nr = nodes[r * W_COLS + c + 1];
+            const mdx = (n.x + nr.x) / 2 - (m.x || W/2);
+            const mdy = (n.y + nr.y) / 2 - (m.y || H/2);
+            const d = Math.sqrt(mdx*mdx + mdy*mdy);
+            const proximity = Math.exp(-d * d / (2 * 200 * 200));
+            const alpha = 0.06 + proximity * 0.18;
+            ctx.beginPath();
+            ctx.moveTo(n.x, n.y); ctx.lineTo(nr.x, nr.y);
+            ctx.strokeStyle = `rgba(26,86,219,${alpha.toFixed(3)})`;
+            ctx.stroke();
+          }
+          // vertical
+          if (r < ROWS) {
+            const nb = nodes[(r + 1) * W_COLS + c];
+            const mdx = (n.x + nb.x) / 2 - (m.x || W/2);
+            const mdy = (n.y + nb.y) / 2 - (m.y || H/2);
+            const d = Math.sqrt(mdx*mdx + mdy*mdy);
+            const proximity = Math.exp(-d * d / (2 * 200 * 200));
+            const alpha = 0.06 + proximity * 0.18;
+            ctx.beginPath();
+            ctx.moveTo(n.x, n.y); ctx.lineTo(nb.x, nb.y);
+            ctx.strokeStyle = `rgba(26,86,219,${alpha.toFixed(3)})`;
+            ctx.stroke();
+          }
+        }
+      }
+
+      // ── 3. Cursor halo ──
+      if (m.x > 0) {
+        const haloR = 100 + smoothSpeed * 3;
+        const haloGrd = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, haloR);
+        haloGrd.addColorStop(0, "rgba(59,130,246,0.18)");
+        haloGrd.addColorStop(0.4, "rgba(26,86,219,0.08)");
+        haloGrd.addColorStop(1, "rgba(17,68,160,0)");
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, haloR, 0, Math.PI * 2);
+        ctx.fillStyle = haloGrd;
+        ctx.fill();
+
+        // inner sharp dot
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(59,130,246,0.6)";
+        ctx.fill();
+
+        // ── 4. Ripple rings from fast movement ──
+        if (smoothSpeed > 6) {
+          ripples.push({ x: m.x, y: m.y, r: 0, maxR: 60 + smoothSpeed * 2, life: 1 });
+        }
+      }
+
+      // Draw & age ripples
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const rp = ripples[i];
+        rp.r += (rp.maxR - rp.r) * 0.06;
+        rp.life -= 0.035;
+        if (rp.life <= 0) { ripples.splice(i, 1); continue; }
+        ctx.beginPath();
+        ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(59,130,246,${(rp.life * 0.35).toFixed(3)})`;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      // ── 5. Velocity streaks ──
+      const spd = Math.sqrt(m.vx * m.vx + m.vy * m.vy);
+      if (spd > 3 && m.x > 0) {
+        streaks.push({
+          x: m.x, y: m.y,
+          dx: -m.vx, dy: -m.vy,
+          len: spd * 3.5,
+          life: 1,
+          width: Math.min(spd * 0.15, 2),
+        });
+      }
+      for (let i = streaks.length - 1; i >= 0; i--) {
+        const s = streaks[i];
+        s.life -= 0.07;
+        if (s.life <= 0) { streaks.splice(i, 1); continue; }
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y);
+        ctx.lineTo(s.x + s.dx * (s.len / spd + 1) * s.life, s.y + s.dy * (s.len / spd + 1) * s.life);
+        ctx.strokeStyle = `rgba(147,197,253,${(s.life * 0.5).toFixed(3)})`;
+        ctx.lineWidth = s.width * s.life;
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+
+      t++;
+      rafRef.current = requestAnimationFrame(draw);
+    }
+
+    draw();
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", onMove);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ position:"fixed", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:0 }}
+    />
+  );
 }
 
+// ─── STYLE HELPERS ───────────────────────────────────────────────────────────
+const fld = err => ({
+  width:"100%", padding:"10px 14px", fontSize:13, fontFamily:C.sans,
+  background: err ? C.errBg : "rgba(255,255,255,0.85)",
+  border:`1.5px solid ${err ? C.errBorder : C.border}`,
+  borderRadius:6, outline:"none", color:C.textPrimary,
+  transition:"border-color 0.15s, box-shadow 0.15s",
+  boxSizing:"border-box", letterSpacing:"0.01em",
+  backdropFilter:"blur(8px)",
+});
+const onFocus = e => {
+  e.target.style.borderColor = C.blue500;
+  e.target.style.boxShadow   = `0 0 0 3px rgba(26,86,219,0.12)`;
+};
+const onBlur = err => e => {
+  e.target.style.borderColor = err ? C.errBorder : C.border;
+  e.target.style.boxShadow   = "none";
+};
+
+// ─── ATOMS ───────────────────────────────────────────────────────────────────
+const Flag = ({ code }) => (
+  <img src={`https://flagcdn.com/20x15/${code}.png`} srcSet={`https://flagcdn.com/40x30/${code}.png 2x`}
+    width="20" height="15" alt={code}
+    style={{ borderRadius:2, flexShrink:0 }}
+    onError={e => { e.target.style.display="none"; }} />
+);
+
+const FieldErr = ({ msg }) => msg
+  ? <p style={{ fontSize:11, color:C.errText, marginTop:5, letterSpacing:"0.01em" }}>{msg}</p>
+  : null;
+
+const FL = ({ children, optional }) => (
+  <label style={{ display:"block", fontSize:10, fontWeight:600, letterSpacing:"0.14em",
+    textTransform:"uppercase", color:C.blue600, marginBottom:7 }}>
+    {children}
+    {optional && <span style={{ fontWeight:400, textTransform:"none", color:C.textMuted, marginLeft:4 }}>(optional)</span>}
+  </label>
+);
+
+const Chip = ({ label, active, onClick }) => (
+  <button type="button" onClick={onClick} style={{
+    padding:"7px 16px", borderRadius:5, fontSize:12,
+    fontWeight: active ? 600 : 400, cursor:"pointer", fontFamily:C.sans,
+    letterSpacing:"0.01em", transition:"all 0.18s",
+    border:`1.5px solid ${active ? C.blue500 : C.border}`,
+    background: active ? C.blue500 : "rgba(255,255,255,0.7)",
+    color: active ? C.white : C.textSecondary,
+    boxShadow: active ? "0 2px 8px rgba(26,86,219,0.25)" : "none",
+  }}>
+    {label}
+  </button>
+);
+
+// glass card
+const glassCard = {
+  background:"rgba(255,255,255,0.80)",
+  backdropFilter:"blur(24px) saturate(1.6)",
+  WebkitBackdropFilter:"blur(24px) saturate(1.6)",
+  border:`1.5px solid rgba(255,255,255,0.9)`,
+  borderRadius:12,
+  boxShadow:"0 4px 24px rgba(17,68,160,0.08), 0 1px 4px rgba(17,68,160,0.06)",
+};
+
+// ─── SIDEBAR ─────────────────────────────────────────────────────────────────
+function Sidebar() {
+  return (
+    <aside className="hidden lg:flex" style={{
+      width:300, flexShrink:0,
+      borderRight:`1.5px solid rgba(255,255,255,0.4)`,
+      padding:"52px 36px",
+      display:"flex", flexDirection:"column", gap:44,
+      background:"rgba(10,22,40,0.88)",
+      backdropFilter:"blur(28px)",
+      position:"relative", zIndex:1,
+    }}>
+      {/* Top accent line */}
+      <div style={{ position:"absolute", top:0, left:36, right:36, height:3, background:C.blue500, borderRadius:"0 0 3px 3px" }} />
+
+      <div style={{ paddingTop:8 }}>
+        <p style={{ fontSize:10, fontWeight:600, letterSpacing:"0.22em", textTransform:"uppercase",
+          color:C.blue400, marginBottom:18 }}>
+          Market Intelligence
+        </p>
+        <h2 style={{ fontFamily:C.serif, fontSize:28, fontWeight:700, color:C.white,
+          lineHeight:1.28, margin:0, letterSpacing:"-0.01em" }}>
+          Understand your market<br/>before it moves.
+        </h2>
+        <p style={{ fontSize:13, color:"rgba(255,255,255,0.6)", lineHeight:1.8, marginTop:16 }}>
+          Our engine maps your sector, geography, and model — then surfaces a personalised intelligence brief within minutes.
+        </p>
+      </div>
+
+      {/* Stats */}
+      <div style={{ display:"flex", flexDirection:"column" }}>
+        {STATS.map((s, i) => (
+          <div key={i} style={{ padding:"16px 0", borderTop:`1px solid rgba(255,255,255,0.1)` }}>
+            <div style={{ fontFamily:C.mono, fontSize:22, fontWeight:500, color:C.blue300, letterSpacing:"-0.01em" }}>{s.value}</div>
+            <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", marginTop:4, letterSpacing:"0.06em" }}>{s.label}</div>
+          </div>
+        ))}
+        <div style={{ borderTop:`1px solid rgba(255,255,255,0.1)` }} />
+      </div>
+
+      {/* Features */}
+      <div style={{ display:"flex", flexDirection:"column", gap:13 }}>
+        {FEATURES.map((f, i) => (
+          <div key={i} style={{ display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ width:20, height:20, borderRadius:"50%", background:"rgba(26,86,219,0.3)",
+              border:`1px solid rgba(59,130,246,0.5)`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+                <polyline points="2,6 5,9 10,3" stroke={C.blue300} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <span style={{ fontSize:12, color:"rgba(255,255,255,0.65)" }}>{f}</span>
+          </div>
+        ))}
+      </div>
+
+      <p style={{ marginTop:"auto", fontSize:11, color:"rgba(255,255,255,0.3)", lineHeight:1.7 }}>
+        End-to-end encrypted.<br/>Never shared with third parties.
+      </p>
+    </aside>
+  );
+}
+
+// ─── MAIN ────────────────────────────────────────────────────────────────────
 export default function OnboardingForm({ onComplete, user }) {
-  const [step, setStep]                           = useState(1);
-  const [selectedCountry, setSelectedCountry]     = useState(COUNTRIES[0]);
-  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
-  const [countrySearch, setCountrySearch]         = useState("");
+  const [step, setStep]         = useState(1);
+  const [ctry, setCtry]         = useState(COUNTRIES[0]);
+  const [showDrop, setShowDrop] = useState(false);
+  const [ctryQ, setCtryQ]       = useState("");
+  const [vis, setVis]           = useState(true);
 
   const [form, setForm] = useState({
-    name:         user?.user_metadata?.full_name || "",
-    email:        "",
-    phone:        "",
-    organization: "",
-    role:         "",
-    teamSize:     "",
-    productName:  "",
-    businessType: "",
-    sector:       "",
-    geography:    "",
-    problem:      "",
-    stage:        "",
-    consent: false,   
+    name: user?.user_metadata?.full_name || "",
+    email:"", phone:"", organization:"", role:"", teamSize:"",
+    productName:"", businessType:"", sector:"", geography:"",
+    problem:"", stage:"", consent:false,
   });
   const [errors, setErrors] = useState({});
 
-  const set      = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const clearErr = (k)    => setErrors(e => { const n = { ...e }; delete n[k]; return n; });
+  useEffect(() => {
+    setVis(false);
+    const timer = setTimeout(() => setVis(true), 70);
+    return () => clearTimeout(timer);
+  }, [step]);
 
-  const isPhoneValid = () => isPhoneValidFor(form.phone, selectedCountry);
+  const set     = (k, v) => setForm(f => ({ ...f, [k]:v }));
+  const clr     = k      => setErrors(e => { const n={...e}; delete n[k]; return n; });
+  const phoneOk = ()     => isPhoneValidFor(form.phone, ctry);
 
-  function handlePhoneChange(e) {
-    const digits = e.target.value.replace(/\D/g, "").slice(0, selectedCountry.length);
-    set("phone", digits);
-    clearErr("phone");
-  }
-
-  function selectCountry(country) {
-    setSelectedCountry(country);
-    set("phone", "");
-    clearErr("phone");
-    setShowCountryDropdown(false);
-    setCountrySearch("");
-  }
+  const handlePhone = e => {
+    set("phone", e.target.value.replace(/\D/g,"").slice(0, ctry.length));
+    clr("phone");
+  };
+  const pickCtry = c => { setCtry(c); set("phone",""); clr("phone"); setShowDrop(false); setCtryQ(""); };
 
   function validate(fields) {
     const errs = {};
     fields.forEach(f => {
-      if (!form[f] || form[f].trim?.() === "") {
-        const label = {
-          name: "Full Name", email: "Email", phone: "Phone Number",
-          organization: "Organization", role: "Role",
-          productName: "Product / Business Name", businessType: "Business Type",
-          sector: "Industry Sector", geography: "Target Geography",
-          problem: "Problem statement", stage: "Stage of Business",
-        }[f] || f;
-        errs[f] = `${label} is required.`;
-      }
+      if (f==="consent") { if (!form[f]) errs[f]="Please accept to continue."; return; }
+      if (!form[f] || form[f].trim?.()==="") errs[f]=`${FIELD_LABELS[f]||f} is required.`;
     });
-    if (form.email && !isEmailValid(form.email))
-      errs.email = "Enter a valid email address (e.g. jane@company.com).";
-    if (form.phone && !isPhoneValid())
-      errs.phone = `Invalid number for ${selectedCountry.name}. ${selectedCountry.hint}.`;
+    if (form.email && !isEmailValid(form.email))    errs.email = "Enter a valid email address.";
+    if (form.phone && !phoneOk()) errs.phone = `Invalid for ${ctry.name}. ${ctry.hint}.`;
     return errs;
   }
 
-  function isStep1Complete() {
-    return STEP1_REQUIRED.every(f => form[f] && form[f].trim?.() !== "")
-      && isEmailValid(form.email)
-      && isPhoneValid();
-  }
-  function isStep2Complete() {
-    return STEP2_REQUIRED.every(f => form[f] && form[f].trim?.() !== "");
-  }
+  const step1ok = () =>
+    STEP1.every(f => form[f] && form[f].trim?.()!=="") && isEmailValid(form.email) && phoneOk();
+  const step2ok = () =>
+    STEP2.every(f => form[f] && form[f].trim?.()!=="") && form.consent===true;
 
-  function handleNext() {
-    if (step === 1) {
-      const errs = validate(STEP1_REQUIRED);
-      if (Object.keys(errs).length) { setErrors(errs); return; }
-      setErrors({});
-      setStep(2);
+  function advance() {
+    if (step===1) {
+      const e = validate(STEP1);
+      if (Object.keys(e).length) { setErrors(e); return; }
+      setErrors({}); setStep(2);
     } else {
-      const errs = validate(STEP2_REQUIRED);
-      if (!form.consent) errs.consent = "Required";
-      if (Object.keys(errs).length) { setErrors(errs); return; }
+      const e = validate([...STEP2,"consent"]);
+      if (Object.keys(e).length) { setErrors(e); return; }
       setErrors({});
-      onComplete({
-        ...form,
-        phoneFull:   `${selectedCountry.code}${form.phone}`,
-        countryCode: selectedCountry.code,
-      });
+      onComplete?.({ ...form, phoneFull:`${ctry.code}${form.phone}`, countryCode:ctry.code });
     }
   }
 
-  // ── Shared input style ────────────────────────────────────────
-  const inp = (field) =>
-    `w-full border rounded-lg px-3 py-2.5 text-sm bg-[#EEF2F7] outline-none transition-all
-    ${errors[field]
-      ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
-      : "border-[#D6DFED] focus:border-[#0091DA] focus:ring-2 focus:ring-[#0091DA]/10 focus:bg-white"}`;
-
-  // ── Shared label style ────────────────────────────────────────
-  const lbl = "block text-[11px] font-semibold uppercase tracking-wider text-[#627289] mb-1.5";
-
-  const canProceed = step === 1
-  ? STEP1_REQUIRED.every(k => form[k]?.trim?.() || form[k]) && isPhoneValid()
-  : STEP2_REQUIRED.every(k => k === "consent" ? form[k] === true : form[k]?.trim?.() || form[k]);
-  const phoneHasError = !!errors.phone;
-
-  const filteredCountries = COUNTRIES.filter(c =>
-    c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
-    c.code.includes(countrySearch)
+  const canGo    = step===1 ? step1ok() : step2ok();
+  const filtered = COUNTRIES.filter(c =>
+    c.name.toLowerCase().includes(ctryQ.toLowerCase()) || c.code.includes(ctryQ)
   );
 
-  
+  const inp = (key, extra={}) => ({
+    style:{ ...fld(errors[key]), ...extra },
+    value: form[key],
+    onChange: e => { set(key, e.target.value); clr(key); },
+    onFocus,
+    onBlur: onBlur(errors[key]),
+  });
+
   return (
     <div
-      className="min-h-screen bg-[#EEF2F7] flex flex-col"
-      onClick={() => showCountryDropdown && setShowCountryDropdown(false)}
+      style={{ minHeight:"100vh", background:C.surface, fontFamily:C.sans,
+        display:"flex", flexDirection:"column", position:"relative" }}
+      onClick={() => showDrop && setShowDrop(false)}
     >
+      <AnimatedBackground />
 
-      {/* ══ TOPBAR ══ */}
-      <header className="bg-[#00338D] h-12 flex items-center justify-between px-4 sm:px-6 shadow-md sticky top-0 z-20 flex-shrink-0">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="w-8 h-8 bg-[#0091DA] rounded flex items-center justify-center font-mono font-bold text-xs text-white flex-shrink-0">IP</div>
-          <div className="min-w-0">
-            <div className="text-[10px] sm:text-xs font-bold tracking-widest text-white uppercase truncate">
-              Infopace Management Pvt Ltd
-            </div>
-            <div className="text-[7px] tracking-widest text-white/40 uppercase hidden sm:block">
-              Market Intelligence Platform
-            </div>
+      {/* ── Header ── */}
+      <header style={{ height:56, borderBottom:`1.5px solid rgba(255,255,255,0.3)`,
+        padding:"0 28px", display:"flex", alignItems:"center", justifyContent:"space-between",
+        position:"sticky", top:0, zIndex:50,
+        background:"rgba(10,22,40,0.92)",
+        backdropFilter:"blur(24px)" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+          <div style={{ width:32, height:32, background:C.blue500, borderRadius:7,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontFamily:C.mono, fontWeight:700, fontSize:10, color:C.white,
+            letterSpacing:"0.05em", boxShadow:"0 2px 8px rgba(26,86,219,0.4)" }}>
+            IP
+          </div>
+          <div>
+            <div style={{ fontSize:12, fontWeight:700, color:C.white,
+              letterSpacing:"0.12em", textTransform:"uppercase" }}>Infopace</div>
+            <div style={{ fontSize:9, color:C.blue300, letterSpacing:"0.14em",
+              textTransform:"uppercase", marginTop:1 }}>Market Intelligence</div>
           </div>
         </div>
-        <div className="text-[9px] tracking-widest text-white/40 uppercase border border-white/20 px-2 sm:px-3 py-1 rounded flex-shrink-0">
-          All Sectors
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <div style={{ width:7, height:7, borderRadius:"50%", background:"#34d399",
+            boxShadow:"0 0 0 3px rgba(52,211,153,0.2)" }} />
+          <span style={{ fontSize:10, color:C.blue200, letterSpacing:"0.12em", textTransform:"uppercase" }}>
+            Live analysis
+          </span>
         </div>
       </header>
 
-      {/* ══ SCROLLABLE BODY ══ */}
-      <main className="flex-1 overflow-y-auto">
-        {/*
-          KEY FIX: w-full + max-w-5xl + mx-auto fills the page properly.
-          px-4 sm:px-8 lg:px-16 gives breathing room without huge side gaps.
-        */}
-        <div className="w-full max-w-5xl mx-auto px-4 sm:px-8 lg:px-16 py-6 sm:py-8">
+      <main style={{ flex:1, display:"flex", position:"relative", zIndex:1 }}>
+        <Sidebar />
 
-          {/* Hero */}
-          <div className="mb-5 sm:mb-7">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#08152A] tracking-tight leading-tight">
-              Market{" "}
-              <em className="not-italic text-[#0091DA] underline underline-offset-[5px]" style={{ textDecorationThickness: 2 }}>
-                Potential
-              </em>{" "}
-              Assessment
-            </h1>
-            <p className="text-xs sm:text-sm text-[#627289] mt-2 leading-relaxed">
-              Describe your product. Our AI reads your sector, geography and business type — then generates custom questions and a personalised market intelligence dashboard.
-            </p>
-          </div>
+        {/* ── Form panel ── */}
+        <div style={{ flex:1, overflowY:"auto", padding:"52px 32px" }}>
+          <div style={{ maxWidth:580, margin:"0 auto" }}>
 
-          {/* Step tabs */}
-          <div className="flex bg-white border border-[#D6DFED] rounded-lg p-1 mb-2">
-            {["Personal Info", "Venture Context"].map((label, i) => (
-              <button key={i}
-                onClick={() => i + 1 < step && setStep(i + 1)}
-                className={`flex-1 flex items-center gap-1.5 sm:gap-2 justify-center py-2 rounded-md text-xs font-medium transition-all
-                  ${step === i + 1 ? "bg-[#00338D] text-white" : step > i + 1 ? "text-[#00A3A1] cursor-pointer" : "text-[#627289] cursor-default"}`}>
-                <span className={`w-[17px] h-[17px] rounded-full border-[1.5px] flex items-center justify-center text-[9px] font-bold flex-shrink-0
-                  ${step === i + 1 ? "border-[#0091DA] bg-[#0091DA] text-white" : step > i + 1 ? "border-[#00A3A1]" : "border-current"}`}>
-                  {step > i + 1 ? "✓" : i + 1}
-                </span>
-                <span className="truncate">{label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Progress bar */}
-          <div className="h-0.5 bg-[#D6DFED] rounded mb-5 overflow-hidden">
-            <div className="h-full bg-[#0091DA] rounded transition-all duration-500"
-              style={{ width: step === 1 ? "50%" : "100%" }} />
-          </div>
-
-          {/* ══ CARD ══ */}
-          <div className="bg-white border border-[#D6DFED] rounded-xl shadow-sm overflow-hidden relative">
-            <div className="absolute top-0 inset-x-0 h-[3px] bg-[#00338D]" />
-
-            {/* ── STEP 1 ── */}
-            {step === 1 && (
-              <div className="p-4 sm:p-6 lg:p-8">
-                <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#D6DFED]">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#EEF2FB] rounded-lg flex items-center justify-center text-lg flex-shrink-0">👤</div>
-                  <div>
-                    <div className="text-sm font-bold text-[#08152A]">Personal Information</div>
-                    <div className="text-xs text-[#627289] mt-0.5">Stored securely in our database</div>
-                  </div>
-                </div>
-
-                {/*
-                  RESPONSIVE GRID:
-                  - Mobile  (< 640px):  1 column
-                  - Tablet  (≥ 640px):  2 columns
-                  - Desktop (≥ 1024px): 3 columns
-                */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-                  {/* Full Name */}
-                  <div>
-                    <label className={lbl}>Full Name *</label>
-                    <input className={inp("name")} placeholder="Jane Doe" value={form.name}
-                      autoComplete="off"
-                      onChange={e => { set("name", e.target.value); clearErr("name"); }} />
-                    {errors.name && <p className="text-[11px] text-red-500 mt-1">{errors.name}</p>}
-                  </div>
-
-                  {/* Email */}
-                  <div>
-                    <label className={lbl}>Email Address *</label>
-                    <input className={inp("email")} placeholder="jane@company.com" type="email"
-                      value={form.email} autoComplete="new-password"
-                      onChange={e => { set("email", e.target.value); clearErr("email"); }}
-                      onBlur={() => {
-                        if (form.email && !isEmailValid(form.email))
-                          setErrors(e => ({ ...e, email: "Enter a valid email address." }));
-                      }} />
-                    {errors.email && <p className="text-[11px] text-red-500 mt-1">{errors.email}</p>}
-                  </div>
-
-                  {/* Organization */}
-                  <div>
-                    <label className={lbl}>Organization *</label>
-                    <input className={inp("organization")} placeholder="Acme Technologies"
-                      value={form.organization} autoComplete="off"
-                      onChange={e => { set("organization", e.target.value); clearErr("organization"); }} />
-                    {errors.organization && <p className="text-[11px] text-red-500 mt-1">{errors.organization}</p>}
-                  </div>
-
-                  {/* Phone — spans 2 cols on tablet, 1 col on mobile/desktop */}
-                  <div className="sm:col-span-2 lg:col-span-1">
-                    <label className={lbl}>Phone Number *</label>
-                    <div
-                      className={`flex items-stretch rounded-lg overflow-visible transition-all
-                        ${phoneHasError ? "ring-2 ring-red-200" : "focus-within:ring-2 focus-within:ring-[#0091DA]/10"}`}
-                      onClick={e => e.stopPropagation()}
-                    >
-                      {/* Country selector */}
-                      <div className="relative flex-shrink-0">
-                        <button type="button"
-                          onClick={() => { setShowCountryDropdown(v => !v); setCountrySearch(""); }}
-                          className={`flex items-center gap-1.5 px-2.5 h-full rounded-l-lg border text-sm font-medium transition-all whitespace-nowrap
-                            ${phoneHasError
-                              ? "border-red-400 bg-red-50"
-                              : "border-[#D6DFED] bg-[#EEF2F7] hover:bg-[#D6DFED]"}`}>
-                          <Flag code={selectedCountry.flag} />
-                          <span className="text-xs font-semibold text-[#08152A]">{selectedCountry.code}</span>
-                          <span className="text-[9px] text-[#9BAABB]">▾</span>
-                        </button>
-
-                        {/* Dropdown */}
-                        {showCountryDropdown && (
-                          <div className="absolute top-full left-0 z-50 mt-1 bg-white border border-[#D6DFED] rounded-lg shadow-xl overflow-hidden" style={{ width: 272 }}>
-                            <div className="p-2 border-b border-[#EEF2F7]">
-                              <input autoFocus
-                                className="w-full text-xs px-2.5 py-1.5 border border-[#D6DFED] rounded-md outline-none focus:border-[#0091DA] bg-[#EEF2F7]"
-                                placeholder="Search country or code…"
-                                value={countrySearch}
-                                onChange={e => setCountrySearch(e.target.value)}
-                                onClick={e => e.stopPropagation()} />
-                            </div>
-                            <div className="max-h-52 overflow-y-auto">
-                              {filteredCountries.length === 0
-                                ? <div className="text-xs text-[#9BAABB] p-3 text-center">No results</div>
-                                : filteredCountries.map((c, i) => (
-                                  <button key={i} type="button" onClick={() => selectCountry(c)}
-                                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-[#EEF2F7] transition-all text-left
-                                      ${selectedCountry.code === c.code && selectedCountry.name === c.name
-                                        ? "bg-[#EEF2FB] font-semibold text-[#00338D]"
-                                        : "text-[#08152A]"}`}>
-                                    <Flag code={c.flag} />
-                                    <span className="flex-1 truncate">{c.name}</span>
-                                    <span className="text-[#9BAABB] font-mono text-[10px]">{c.code}</span>
-                                  </button>
-                                ))
-                              }
-                            </div>
-                          </div>
-                        )}
+            {/* Step indicator */}
+            <div style={{ display:"flex", alignItems:"center", marginBottom:32 }}>
+              {["Personal details","Venture context"].map((label, i) => {
+                const active = step===i+1, done = step>i+1;
+                return (
+                  <div key={i} style={{ display:"flex", alignItems:"center" }}>
+                    <button onClick={() => done && setStep(i+1)}
+                      style={{ display:"flex", alignItems:"center", gap:9,
+                        background:"none", border:"none",
+                        cursor:done?"pointer":"default", padding:"6px 0" }}>
+                      <div style={{ width:24, height:24, borderRadius:"50%",
+                        border:`2px solid ${active ? C.blue500 : done ? "#34d399" : C.border}`,
+                        background: active ? C.blue500 : done ? "#34d399" : "rgba(255,255,255,0.6)",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        transition:"all 0.22s", flexShrink:0,
+                        boxShadow: active ? "0 0 0 4px rgba(26,86,219,0.15)" : "none" }}>
+                        {done
+                          ? <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                              <polyline points="2,6 5,9 10,3" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          : <span style={{ fontSize:10, fontWeight:700,
+                              color:active?"white":C.textMuted, fontFamily:C.mono }}>{i+1}</span>
+                        }
                       </div>
+                      <span style={{ fontSize:12, fontWeight: active ? 600 : 400,
+                        color:active?C.blue600:done?"#059669":C.textMuted }}>{label}</span>
+                    </button>
+                    {i===0 && (
+                      <div style={{ width:28, height:2, background:step>1?"#34d399":C.border,
+                        margin:"0 10px", borderRadius:2, transition:"background 0.35s" }} />
+                    )}
+                  </div>
+                );
+              })}
+              <span style={{ marginLeft:"auto", fontSize:10, color:C.textMuted,
+                fontFamily:C.mono, letterSpacing:"0.06em" }}>{step} / 2</span>
+            </div>
 
-                      {/* Number input */}
-                      <div className={`flex flex-1 items-center border border-l-0 rounded-r-lg transition-all min-w-0
-                        ${phoneHasError
-                          ? "border-red-400 bg-[#EEF2F7]"
-                          : "border-[#D6DFED] bg-[#EEF2F7] focus-within:border-[#0091DA] focus-within:bg-white"}`}>
-                        <input
-                          className="flex-1 bg-transparent outline-none text-sm py-2.5 pl-3 min-w-0"
-                          type="tel" inputMode="numeric" autoComplete="off"
-                          placeholder={selectedCountry.placeholder}
-                          value={form.phone}
-                          onChange={handlePhoneChange}
-                          onBlur={() => {
-                            if (form.phone && !isPhoneValid())
-                              setErrors(e => ({ ...e, phone: `Invalid for ${selectedCountry.name}. ${selectedCountry.hint}.` }));
-                          }} />
-                        <span className="pr-3 text-[10px] text-[#9BAABB] whitespace-nowrap">
-                          {form.phone.length}/{selectedCountry.length}
+            {/* Progress bar */}
+            <div style={{ height:2, background:"rgba(17,68,160,0.1)", marginBottom:40,
+              overflow:"hidden", borderRadius:2 }}>
+              <div style={{ height:"100%", width:step===1?"50%":"100%",
+                background:C.blue500, borderRadius:2,
+                transition:"width 0.5s cubic-bezier(0.4,0,0.2,1)",
+                boxShadow:"0 0 12px rgba(26,86,219,0.4)" }} />
+            </div>
+
+            {/* Form card */}
+            <div style={{ ...glassCard, padding:"38px 38px 30px",
+              opacity:vis?1:0, transform:vis?"none":"translateY(10px)",
+              transition:"opacity 0.28s ease, transform 0.28s ease" }}>
+
+              {/* ── STEP 1 ── */}
+              {step===1 && (
+                <>
+                  <div style={{ marginBottom:30 }}>
+                    <h1 style={{ fontFamily:C.serif, fontSize:27, fontWeight:700,
+                      color:C.blue900, margin:0, letterSpacing:"-0.02em", lineHeight:1.2 }}>
+                      Personal details
+                    </h1>
+                    <p style={{ fontSize:12, color:C.textMuted, marginTop:9, letterSpacing:"0.01em" }}>
+                      Stored securely. Never shared.
+                    </p>
+                  </div>
+
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"20px 18px" }}>
+
+                    <div>
+                      <FL>Full name *</FL>
+                      <input placeholder="Jane Doe" {...inp("name")} />
+                      <FieldErr msg={errors.name} />
+                    </div>
+
+                    <div>
+                      <FL>Email *</FL>
+                      <input type="email" placeholder="jane@company.com"
+                        style={fld(errors.email)} value={form.email}
+                        onChange={e => { set("email",e.target.value); clr("email"); }}
+                        onFocus={onFocus}
+                        onBlur={e => {
+                          onBlur(errors.email)(e);
+                          if (form.email && !isEmailValid(form.email))
+                            setErrors(p => ({ ...p, email:"Enter a valid email address." }));
+                        }} />
+                      <FieldErr msg={errors.email} />
+                    </div>
+
+                    <div>
+                      <FL>Organization *</FL>
+                      <input placeholder="Acme Technologies" {...inp("organization")} />
+                      <FieldErr msg={errors.organization} />
+                    </div>
+
+                    <div>
+                      <FL>Role *</FL>
+                      <select style={{ ...fld(errors.role), appearance:"none", cursor:"pointer" }}
+                        value={form.role} onChange={e => { set("role",e.target.value); clr("role"); }}
+                        onFocus={onFocus} onBlur={onBlur(errors.role)}>
+                        <option value="">Select…</option>
+                        {ROLES.map(r => <option key={r}>{r}</option>)}
+                      </select>
+                      <FieldErr msg={errors.role} />
+                    </div>
+
+                    {/* Phone */}
+                    <div style={{ gridColumn:"span 2" }} onClick={e => e.stopPropagation()}>
+                      <FL>Phone *</FL>
+                      <div style={{ display:"flex",
+                        border:`1.5px solid ${errors.phone ? C.errBorder : C.border}`,
+                        borderRadius:6, background:errors.phone?"rgba(255,241,242,0.85)":"rgba(255,255,255,0.85)",
+                        transition:"border-color 0.15s", backdropFilter:"blur(8px)" }}>
+                        <div style={{ position:"relative", flexShrink:0 }}>
+                          <button type="button" onClick={() => { setShowDrop(v => !v); setCtryQ(""); }}
+                            style={{ display:"flex", alignItems:"center", gap:6, padding:"10px 13px",
+                              background:"transparent", border:"none",
+                              borderRight:`1.5px solid ${C.border}`, cursor:"pointer", height:"100%" }}>
+                            <Flag code={ctry.flag} />
+                            <span style={{ fontSize:11, fontWeight:600, color:C.blue700,
+                              fontFamily:C.mono }}>{ctry.code}</span>
+                            <span style={{ fontSize:8, color:C.textMuted }}>▾</span>
+                          </button>
+                          {showDrop && (
+                            <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, zIndex:100,
+                              background:"rgba(255,255,255,0.97)", backdropFilter:"blur(20px)",
+                              border:`1.5px solid ${C.border}`, borderRadius:9,
+                              boxShadow:"0 12px 40px rgba(10,22,40,0.12)", width:264, overflow:"hidden" }}>
+                              <div style={{ padding:9, borderBottom:`1px solid ${C.border}` }}>
+                                <input autoFocus placeholder="Search country…" value={ctryQ}
+                                  onChange={e => setCtryQ(e.target.value)}
+                                  onClick={e => e.stopPropagation()}
+                                  style={{ width:"100%", padding:"7px 10px", fontSize:12,
+                                    border:`1.5px solid ${C.border}`, borderRadius:5, outline:"none",
+                                    background:"rgba(240,244,255,0.7)", boxSizing:"border-box",
+                                    fontFamily:C.sans, color:C.textPrimary }} />
+                              </div>
+                              <div style={{ maxHeight:220, overflowY:"auto" }}>
+                                {filtered.length===0
+                                  ? <div style={{ fontSize:12, color:C.textMuted, padding:14, textAlign:"center" }}>No results</div>
+                                  : filtered.map((c, i) => (
+                                    <button key={i} type="button" onClick={() => pickCtry(c)}
+                                      style={{ width:"100%", display:"flex", alignItems:"center", gap:9,
+                                        padding:"9px 13px", border:"none", cursor:"pointer", textAlign:"left",
+                                        fontSize:12, background:ctry.name===c.name?C.blue50:"transparent",
+                                        color:C.textPrimary, fontFamily:C.sans }}>
+                                      <Flag code={c.flag} />
+                                      <span style={{ flex:1 }}>{c.name}</span>
+                                      <span style={{ color:C.textMuted, fontFamily:C.mono, fontSize:10 }}>{c.code}</span>
+                                    </button>
+                                  ))
+                                }
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <input type="tel" inputMode="numeric" placeholder={ctry.placeholder} value={form.phone}
+                          onChange={handlePhone}
+                          onBlur={() => { if (form.phone && !phoneOk())
+                            setErrors(p => ({ ...p, phone:`Invalid for ${ctry.name}. ${ctry.hint}.` })); }}
+                          style={{ flex:1, border:"none", background:"transparent", outline:"none",
+                            padding:"10px 13px", fontSize:13, color:C.textPrimary, fontFamily:C.sans }} />
+                        <span style={{ padding:"10px 13px", fontSize:10, color:C.textMuted,
+                          fontFamily:C.mono, alignSelf:"center", whiteSpace:"nowrap" }}>
+                          {form.phone.length}/{ctry.length}
                         </span>
                       </div>
+                      {errors.phone
+                        ? <p style={{ fontSize:11, color:C.errText, marginTop:5 }}>{errors.phone}</p>
+                        : <p style={{ fontSize:11, color:C.textMuted, marginTop:5 }}>{ctry.name}: {ctry.hint}</p>
+                      }
                     </div>
-                    {!phoneHasError
-                      ? <p className="text-[11px] text-[#9BAABB] mt-1">{selectedCountry.name}: {selectedCountry.hint}</p>
-                      : <p className="text-[11px] text-red-500 mt-1">{errors.phone}</p>}
-                  </div>
 
-                  {/* Role — full width on all sizes */}
-                  <div className="sm:col-span-2 lg:col-span-2">
-                    <label className={lbl}>Your Role *</label>
-                    <select className={inp("role")} value={form.role} autoComplete="off"
-                      onChange={e => { set("role", e.target.value); clearErr("role"); }}>
-                      <option value="">Select your role…</option>
-                      {ROLES.map(r => <option key={r}>{r}</option>)}
-                    </select>
-                    {errors.role && <p className="text-[11px] text-red-500 mt-1">{errors.role}</p>}
-                  </div>
-
-                  {/* Team Size — full width */}
-                  <div className="col-span-1 sm:col-span-2 lg:col-span-3">
-                    <label className={lbl}>Team Size <span className="normal-case font-normal text-[#9BAABB]">(optional)</span></label>
-                    <div className="flex gap-2 flex-wrap">
-                      {TEAM_SIZES.map(s => (
-                        <button key={s} type="button" onClick={() => set("teamSize", s)}
-                          className={`px-3 py-2 border rounded-lg text-xs font-medium transition-all active:scale-95
-                            ${form.teamSize === s
-                              ? "bg-[#00338D] text-white border-[#00338D]"
-                              : "bg-[#EEF2F7] text-[#627289] border-[#D6DFED] hover:border-[#00338D]"}`}>
-                          {s}
-                        </button>
-                      ))}
+                    <div style={{ gridColumn:"span 2" }}>
+                      <FL optional>Team size</FL>
+                      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                        {TEAM_SIZES.map(s => (
+                          <Chip key={s} label={s} active={form.teamSize===s}
+                            onClick={() => set("teamSize",s)} />
+                        ))}
+                      </div>
                     </div>
                   </div>
+                </>
+              )}
 
-                </div>
-              </div>
-            )}
-
-            {/* ── STEP 2 ── */}
-            {step === 2 && (
-              <div className="p-4 sm:p-6 lg:p-8">
-                <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#D6DFED]">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#EEF2FB] rounded-lg flex items-center justify-center text-lg flex-shrink-0">🚀</div>
-                  <div>
-                    <div className="text-sm font-bold text-[#08152A]">Tell us about your product</div>
-                    <div className="text-xs text-[#627289] mt-0.5">This drives everything — AI tailors all subsequent questions to your exact context</div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-                  {/* Product Name */}
-                  <div>
-                    <label className={lbl}>Product / Business Name *</label>
-                    <input className={inp("productName")} placeholder="e.g. MedSync AI"
-                      value={form.productName} autoComplete="off"
-                      onChange={e => { set("productName", e.target.value); clearErr("productName"); }} />
-                    {errors.productName && <p className="text-[11px] text-red-500 mt-1">{errors.productName}</p>}
-                  </div>
-
-                  {/* Sector */}
-                  <div>
-                    <label className={lbl}>Industry Sector *</label>
-                    <select className={inp("sector")} value={form.sector} autoComplete="off"
-                      onChange={e => { set("sector", e.target.value); clearErr("sector"); }}>
-                      <option value="">Select sector…</option>
-                      {SECTORS.map(s => <option key={s}>{s}</option>)}
-                    </select>
-                    {errors.sector && <p className="text-[11px] text-red-500 mt-1">{errors.sector}</p>}
-                  </div>
-
-                  {/* Business Type */}
-                  <div>
-                    <label className={lbl}>Business Type *</label>
-                    <select className={inp("businessType")} value={form.businessType} autoComplete="off"
-                      onChange={e => { set("businessType", e.target.value); clearErr("businessType"); }}>
-                      <option value="">Select type…</option>
-                      {BUSINESS_TYPES.map(t => <option key={t}>{t}</option>)}
-                    </select>
-                    {errors.businessType && <p className="text-[11px] text-red-500 mt-1">{errors.businessType}</p>}
-                  </div>
-
-                  {/* Geography */}
-                  <div>
-                    <label className={lbl}>Target Geography *</label>
-                    <select className={inp("geography")} value={form.geography} autoComplete="off"
-                      onChange={e => { set("geography", e.target.value); clearErr("geography"); }}>
-                      <option value="">Select region…</option>
-                      {GEO.map(g => <option key={g.v} value={g.v}>{g.l}</option>)}
-                    </select>
-                    {errors.geography && <p className="text-[11px] text-red-500 mt-1">{errors.geography}</p>}
-                  </div>
-
-                  {/* Stage — spans 2 cols on tablet, 2 on desktop */}
-                  <div className="sm:col-span-1 lg:col-span-2">
-                    <label className={lbl}>Stage of Business *</label>
-                    <div className="flex gap-2 flex-wrap">
-                      {STAGES.map((s, i) => (
-                        <button key={s} type="button"
-                          onClick={() => { set("stage", String(i + 1)); clearErr("stage"); }}
-                          className={`px-3 py-2 border rounded-lg text-xs font-medium transition-all active:scale-95
-                            ${form.stage === String(i + 1)
-                              ? "bg-[#00338D] text-white border-[#00338D]"
-                              : "bg-[#EEF2F7] text-[#627289] border-[#D6DFED] hover:border-[#00338D]"}`}>
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                    {errors.stage && <p className="text-[11px] text-red-500 mt-1">{errors.stage}</p>}
-                  </div>
-
-                  {/* Problem — always full width */}
-                  <div className="col-span-1 sm:col-span-2 lg:col-span-3">
-                    <label className={lbl}>What problem does your product solve? (Be Specific) *</label>
-                    <p className="text-[11px] text-[#0091DA] italic mb-1.5">
-                      e.g. "Hospital procurement teams spend 3+ hours daily on manual vendor coordination…"
+              {/* ── STEP 2 ── */}
+              {step===2 && (
+                <>
+                  <div style={{ marginBottom:30 }}>
+                    <h1 style={{ fontFamily:C.serif, fontSize:27, fontWeight:700,
+                      color:C.blue900, margin:0, letterSpacing:"-0.02em", lineHeight:1.2 }}>
+                      Your venture
+                    </h1>
+                    <p style={{ fontSize:12, color:C.textMuted, marginTop:9 }}>
+                      The analysis is tailored to your exact context.
                     </p>
-                    <textarea className={`${inp("problem")} resize-none`} rows={4} autoComplete="off"
-                      placeholder="Describe the core problem and your solution approach…"
-                      value={form.problem}
-                      onChange={e => { set("problem", e.target.value); clearErr("problem"); }} />
-                    {errors.problem && <p className="text-[11px] text-red-500 mt-1">{errors.problem}</p>}
                   </div>
 
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"20px 18px" }}>
 
-                </div>
-            {/* Data Consent */}
-<div className="col-span-1 sm:col-span-2 lg:col-span-3 mt-6">
-  <label className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-all
-    ${errors.consent ? "border-red-400 bg-red-50" : form.consent
-      ? "border-[#00338D] bg-[#EEF2FB]"
-      : "border-[#D6DFED] bg-[#EEF2F7] hover:border-[#00338D]"}`}>
-    <input
-      type="checkbox"
-      checked={form.consent}
-      onChange={e => { set("consent", e.target.checked); clearErr("consent"); }}
-      className="mt-0.5 w-4 h-4 accent-[#00338D] flex-shrink-0"
-    />
-    <span className="text-xs text-[#627289] leading-relaxed">
-      I consent to providing my details for this assessment.{" "}
-      <span className="text-[#00338D] font-semibold">
-        Details will not be shared with third parties for any other purposes.
-      </span>
-    </span>
-  </label>
-  {errors.consent && <p className="text-[11px] text-red-500 mt-1">Please accept the consent to continue.</p>}
-</div>
+                    <div>
+                      <FL>Product / business name *</FL>
+                      <input placeholder="e.g. MedSync AI" {...inp("productName")} />
+                      <FieldErr msg={errors.productName} />
+                    </div>
+
+                    <div>
+                      <FL>Industry sector *</FL>
+                      <select style={{ ...fld(errors.sector), appearance:"none", cursor:"pointer" }}
+                        value={form.sector} onChange={e => { set("sector",e.target.value); clr("sector"); }}
+                        onFocus={onFocus} onBlur={onBlur(errors.sector)}>
+                        <option value="">Select…</option>
+                        {SECTORS.map(s => <option key={s}>{s}</option>)}
+                      </select>
+                      <FieldErr msg={errors.sector} />
+                    </div>
+
+                    <div>
+                      <FL>Business type *</FL>
+                      <select style={{ ...fld(errors.businessType), appearance:"none", cursor:"pointer" }}
+                        value={form.businessType} onChange={e => { set("businessType",e.target.value); clr("businessType"); }}
+                        onFocus={onFocus} onBlur={onBlur(errors.businessType)}>
+                        <option value="">Select…</option>
+                        {BUSINESS_TYPES.map(t => <option key={t}>{t}</option>)}
+                      </select>
+                      <FieldErr msg={errors.businessType} />
+                    </div>
+
+                    <div>
+                      <FL>Target geography *</FL>
+                      <select style={{ ...fld(errors.geography), appearance:"none", cursor:"pointer" }}
+                        value={form.geography} onChange={e => { set("geography",e.target.value); clr("geography"); }}
+                        onFocus={onFocus} onBlur={onBlur(errors.geography)}>
+                        <option value="">Select…</option>
+                        {GEO.map(g => <option key={g.v} value={g.v}>{g.l}</option>)}
+                      </select>
+                      <FieldErr msg={errors.geography} />
+                    </div>
+
+                    <div style={{ gridColumn:"span 2" }}>
+                      <FL>Stage *</FL>
+                      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                        {STAGES.map((s, i) => (
+                          <Chip key={s} label={s} active={form.stage===String(i+1)}
+                            onClick={() => { set("stage",String(i+1)); clr("stage"); }} />
+                        ))}
+                      </div>
+                      <FieldErr msg={errors.stage} />
+                    </div>
+
+                    <div style={{ gridColumn:"span 2" }}>
+                      <FL>Core problem your product solves *</FL>
+                      <p style={{ fontSize:11, color:C.textMuted, fontStyle:"italic",
+                        marginBottom:8, lineHeight:1.6 }}>
+                        e.g. "Hospital procurement teams spend 3+ hours on manual vendor coordination daily…"
+                      </p>
+                      <textarea rows={4} placeholder="Describe the problem and your solution approach…"
+                        value={form.problem}
+                        onChange={e => { set("problem",e.target.value); clr("problem"); }}
+                        onFocus={onFocus} onBlur={onBlur(errors.problem)}
+                        style={{ ...fld(errors.problem), resize:"none", minHeight:96, lineHeight:1.7 }} />
+                      <FieldErr msg={errors.problem} />
+                    </div>
+
+                    <div style={{ gridColumn:"span 2", marginTop:4 }}>
+                      <label style={{ display:"flex", alignItems:"flex-start", gap:12, cursor:"pointer",
+                        padding:"14px 16px", borderRadius:7, transition:"all 0.18s",
+                        background: form.consent ? "rgba(26,86,219,0.05)" : "rgba(240,244,255,0.5)",
+                        border:`1.5px solid ${errors.consent ? C.errBorder : form.consent ? "rgba(26,86,219,0.3)" : C.border}` }}>
+                        <input type="checkbox" checked={form.consent}
+                          onChange={e => { set("consent",e.target.checked); clr("consent"); }}
+                          style={{ marginTop:2, width:14, height:14, accentColor:C.blue500,
+                            flexShrink:0, cursor:"pointer" }} />
+                        <span style={{ fontSize:12, color:C.textSecondary, lineHeight:1.7 }}>
+                          I consent to providing my details for this assessment.{" "}
+                          <span style={{ color:C.blue700, fontWeight:600 }}>
+                            Your information will never be shared with third parties.
+                          </span>
+                        </span>
+                      </label>
+                      <FieldErr msg={errors.consent} />
+                    </div>
+
+                  </div>
+                </>
+              )}
+
+              {/* Nav buttons */}
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
+                marginTop:38, paddingTop:26, borderTop:`1.5px solid rgba(17,68,160,0.08)` }}>
+                <button onClick={() => setStep(1)} style={{
+                  padding:"10px 20px", fontSize:12, fontWeight:500, borderRadius:6,
+                  border:`1.5px solid ${C.border}`, background:"rgba(255,255,255,0.7)",
+                  color:C.textSecondary, cursor:"pointer", fontFamily:C.sans,
+                  letterSpacing:"0.01em", transition:"all 0.18s",
+                  visibility:step===1?"hidden":"visible",
+                }}>
+                  ← Back
+                </button>
+                <button onClick={advance} disabled={!canGo} style={{
+                  padding:"11px 28px", fontSize:12, fontWeight:600, borderRadius:6,
+                  border:"none",
+                  background:canGo ? C.blue500 : "rgba(17,68,160,0.1)",
+                  color:canGo ? C.white : C.textMuted,
+                  cursor:canGo?"pointer":"not-allowed", fontFamily:C.sans,
+                  letterSpacing:"0.06em", transition:"all 0.2s",
+                  boxShadow:canGo ? "0 4px 16px rgba(26,86,219,0.35)" : "none",
+                  transform:canGo?"translateY(0)":"translateY(0)",
+                }}>
+                  {step===1 ? "Continue →" : "Begin assessment →"}
+                </button>
               </div>
-            )}
 
+            </div>{/* /card */}
 
-
-            {/* ── FOOTER NAV ── */}
-            <div className="flex justify-between items-center px-4 sm:px-6 lg:px-8 py-4 border-t border-[#D6DFED] bg-[#EEF2F7]">
-              <button onClick={() => setStep(1)}
-                className={`px-4 sm:px-5 py-2 text-xs font-semibold border border-[#D6DFED] rounded-lg
-                  text-[#627289] bg-transparent hover:border-[#08152A] hover:text-[#08152A] transition-all
-                  ${step === 1 ? "invisible" : ""}`}>
-                ← Back
-              </button>
-              <span className="text-[11px] text-[#627289] font-mono">Step {step} of 2</span>
-              <button onClick={handleNext} disabled={!canProceed}
-                title={!canProceed ? "Please fill all required fields before continuing" : ""}
-                className={`px-5 sm:px-6 py-2 text-xs font-semibold rounded-lg transition-all
-                  ${canProceed
-                    ? "bg-[#00338D] text-white hover:bg-[#005EB8] cursor-pointer active:scale-95"
-                    : "bg-[#D6DFED] text-[#9BAABB] cursor-not-allowed"}`}>
-                {step === 1 ? "Next →" : "Start Assessment →"}
-              </button>
-            </div>
+            <p style={{ textAlign:"center", fontSize:10, color:C.textMuted, marginTop:28,
+              paddingBottom:44, letterSpacing:"0.1em", textTransform:"uppercase" }}>
+              Encrypted · Confidential · Never sold
+            </p>
           </div>
-
-          <p className="text-center text-[11px] text-[#9BAABB] mt-4 pb-6">
-            🔒 Your data is stored securely. We never share personal details with third parties.
-          </p>
-
         </div>
       </main>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{background:#F0F4FF;}
+        input::placeholder,textarea::placeholder{color:#94a3b8;}
+        select option{background:#fff;color:#0A1628;}
+        ::-webkit-scrollbar{width:4px;}
+        ::-webkit-scrollbar-track{background:transparent;}
+        ::-webkit-scrollbar-thumb{background:rgba(17,68,160,0.2);border-radius:4px;}
+        button:hover:not(:disabled){filter:brightness(1.05);}
+        .hidden{display:none!important;}
+        @media(min-width:1024px){.hidden.lg\\:flex{display:flex!important;}}
+      `}</style>
     </div>
   );
 }
