@@ -156,17 +156,81 @@ function AnimatedBackground() {
     resize();
     window.addEventListener("resize", resize);
 
-    // ── Floating orbs that react to cursor ──
-    const ORBS = Array.from({ length: 5 }, (_, i) => ({
-      x:    Math.random() * W,
-      y:    Math.random() * H,
-      r:    180 + i * 60,
-      vx:   (Math.random() - 0.5) * 0.25,
-      vy:   (Math.random() - 0.5) * 0.2,
-      tx:   0, ty: 0,
-      phase: Math.random() * Math.PI * 2,
-      speed: 0.0003 + Math.random() * 0.0002,
-    }));
+    // ── 3D Wireframe Shapes ──
+    // Project a 3D point to 2D canvas coords
+    function project(x, y, z, cx, cy, fov = 320) {
+      const scale = fov / (fov + z);
+      return { x: cx + x * scale, y: cy + y * scale, scale };
+    }
+
+    // Rotate a point around X and Y axes
+    function rotateXY(x, y, z, rx, ry) {
+      // Rotate around Y
+      const x1 = x * Math.cos(ry) - z * Math.sin(ry);
+      const z1 = x * Math.sin(ry) + z * Math.cos(ry);
+      // Rotate around X
+      const y2 = y * Math.cos(rx) - z1 * Math.sin(rx);
+      const z2 = y * Math.sin(rx) + z1 * Math.cos(rx);
+      return { x: x1, y: y2, z: z2 };
+    }
+
+    // Define cube vertices & edges
+    function makeCube(size) {
+      const h = size / 2;
+      const verts = [
+        [-h,-h,-h],[h,-h,-h],[h,h,-h],[-h,h,-h],
+        [-h,-h, h],[h,-h, h],[h,h, h],[-h,h, h],
+      ];
+      const edges = [
+        [0,1],[1,2],[2,3],[3,0],
+        [4,5],[5,6],[6,7],[7,4],
+        [0,4],[1,5],[2,6],[3,7],
+      ];
+      return { verts, edges };
+    }
+
+    // Define octahedron vertices & edges
+    function makeOctahedron(size) {
+      const s = size;
+      const verts = [
+        [0,-s,0],[s,0,0],[0,0,s],[-s,0,0],[0,0,-s],[0,s,0],
+      ];
+      const edges = [
+        [0,1],[0,2],[0,3],[0,4],
+        [5,1],[5,2],[5,3],[5,4],
+        [1,2],[2,3],[3,4],[4,1],
+      ];
+      return { verts, edges };
+    }
+
+    // Define icosahedron-like diamond / tetrahedron
+    function makeTetrahedron(size) {
+      const s = size;
+      const verts = [
+        [0, s, 0],
+        [ s * 0.94, -s * 0.33, 0],
+        [-s * 0.47, -s * 0.33,  s * 0.82],
+        [-s * 0.47, -s * 0.33, -s * 0.82],
+      ];
+      const edges = [
+        [0,1],[0,2],[0,3],[1,2],[2,3],[3,1],
+      ];
+      return { verts, edges };
+    }
+
+    // Initialise shape instances
+    const SHAPES = [
+      { ...makeCube(70),        cx: 0, cy: 0, rx: 0.003, ry: 0.005, rz: 0.002, angX: 0.4, angY: 0.2 },
+      { ...makeOctahedron(55),  cx: 0, cy: 0, rx: 0.004, ry: 0.003, rz: 0.003, angX: 1.0, angY: 0.8 },
+      { ...makeTetrahedron(62), cx: 0, cy: 0, rx: 0.003, ry: 0.006, rz: 0.001, angX: 2.1, angY: 1.4 },
+    ];
+
+    // Positions spread across canvas — initialised in draw when W/H are set
+    const shapePositions = [
+      { fx: 0.12, fy: 0.25 },
+      { fx: 0.88, fy: 0.65 },
+      { fx: 0.55, fy: 0.12 },
+    ];
 
     // ── Ripple trails ──
     const ripples = [];
@@ -177,6 +241,35 @@ function AnimatedBackground() {
     let t = 0;
     let prevSpeed = 0;
 
+    function drawShape(shape, pos, alpha) {
+      const cx = pos.fx * W;
+      const cy = pos.fy * H;
+      const projected = shape.verts.map(([x, y, z]) => {
+        const rot = rotateXY(x, y, z, shape.angX, shape.angY);
+        return project(rot.x, rot.y, rot.z, cx, cy);
+      });
+
+      ctx.lineWidth = 0.7;
+      shape.edges.forEach(([a, b]) => {
+        const pa = projected[a], pb = projected[b];
+        // depth-based fade
+        const depthAlpha = alpha * (0.5 + 0.5 * ((pa.scale + pb.scale) / 2));
+        ctx.beginPath();
+        ctx.moveTo(pa.x, pa.y);
+        ctx.lineTo(pb.x, pb.y);
+        ctx.strokeStyle = `rgba(59,130,246,${depthAlpha.toFixed(3)})`;
+        ctx.stroke();
+      });
+
+      // small vertex dots
+      projected.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(147,197,253,${(alpha * 0.7).toFixed(3)})`;
+        ctx.fill();
+      });
+    }
+
     function draw() {
       const m = mouseRef.current;
       const speed = Math.sqrt(m.vx * m.vx + m.vy * m.vy);
@@ -185,38 +278,11 @@ function AnimatedBackground() {
 
       ctx.clearRect(0, 0, W, H);
 
-      // ── 1. Ambient orbs ──
-      ORBS.forEach((orb, i) => {
-        // Cursor attraction
-        if (m.x > 0) {
-          const dx = m.x - orb.x, dy = m.y - orb.y;
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          const force = Math.min(0.4, 120 / (dist + 80));
-          orb.vx += dx * force * 0.0006;
-          orb.vy += dy * force * 0.0006;
-        }
-        orb.vx *= 0.97; orb.vy *= 0.97;
-        // gentle drift
-        orb.vx += (Math.random() - 0.5) * 0.03;
-        orb.vy += (Math.random() - 0.5) * 0.03;
-        orb.x += orb.vx; orb.y += orb.vy;
-        if (orb.x < -orb.r) orb.x = W + orb.r;
-        if (orb.x > W + orb.r) orb.x = -orb.r;
-        if (orb.y < -orb.r) orb.y = H + orb.r;
-        if (orb.y > H + orb.r) orb.y = -orb.r;
-
-        const breathe = 1 + 0.07 * Math.sin(t * orb.speed * 5000 + orb.phase);
-        const rr = orb.r * breathe;
-
-        const grd = ctx.createRadialGradient(orb.x, orb.y, 0, orb.x, orb.y, rr);
-        const alpha = 0.035 + 0.015 * Math.sin(t * orb.speed * 3000 + orb.phase);
-        grd.addColorStop(0, `rgba(26,86,219,${alpha + 0.02})`);
-        grd.addColorStop(0.5, `rgba(17,68,160,${alpha})`);
-        grd.addColorStop(1, "rgba(17,68,160,0)");
-        ctx.beginPath();
-        ctx.arc(orb.x, orb.y, rr, 0, Math.PI * 2);
-        ctx.fillStyle = grd;
-        ctx.fill();
+      // ── 1. Slow-rotating 3D wireframe shapes ──
+      SHAPES.forEach((shape, i) => {
+        shape.angX += shape.rx;
+        shape.angY += shape.ry;
+        drawShape(shape, shapePositions[i], 0.22);
       });
 
       // ── 2. Grid mesh — distorted by cursor ──
