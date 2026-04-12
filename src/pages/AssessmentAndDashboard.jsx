@@ -77,20 +77,22 @@ export default function AssessmentAndDashboard({ userData, onResult, onRestart }
         onResult(fd.answers || {}, result);
       }
 
-      // Render dashboard in iframe
+      // Render dashboard in iframe with AI result
       postToIframe({ type: "INFOPACE_RENDER", fd, analysis: result });
 
     } catch (err) {
-      console.error("Analysis failed:", err);
-      postToIframe({ type: "INFOPACE_LOADER_STEP", step: 5, msg: "Running offline analysis…", pct: 95 });
+      console.warn("Gemini analysis failed, falling back to offline:", err.message);
+
+      // Pass null analysis — dashboard.html will run offlineAnalysis(fd) itself
+      postToIframe({ type: "INFOPACE_LOADER_STEP", step: 5, msg: "Building offline analysis…", pct: 95 });
+
+      if (onResult) {
+        onResult(fd.answers || {}, {});
+      }
+
       setTimeout(() => {
-        const fallbackResult = {};
-        // Still try to save even on fallback
-        if (onResult) {
-          onResult(fd.answers || {}, fallbackResult);
-        }
-        postToIframe({ type: "INFOPACE_RENDER", fd, analysis: fallbackResult });
-      }, 800);
+        postToIframe({ type: "INFOPACE_RENDER", fd, analysis: null });
+      }, 600);
     }
   }
 
