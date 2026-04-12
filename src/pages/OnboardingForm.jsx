@@ -42,13 +42,14 @@ const COUNTRIES  = [
 ];
 
 const STATS = [
-  { value:"2,400+", label:"Assessments delivered" },
-  { value:"94%",    label:"Accuracy rate"          },
-  { value:"48 hrs", label:"Average time saved"     },
+  { value: "3×",    label: "Faster than traditional research" },
+  { value: "50+",    label: "Data points analysed per assessment" },
+  { value: "5 mins",  label: "From inputs to full intelligence dashboard" }
+  
 ];
 const FEATURES = [
   "TAM / SAM / SOM breakdown",
-  "Competitor intelligence",
+  "Competitor radar & scoring",
   "12-month revenue projections",
   "Geographic opportunity map",
   "90-day execution roadmap",
@@ -501,13 +502,13 @@ function Sidebar() {
       <div style={{ position:"absolute", top:0, left:36, right:36, height:3, background:C.blue500, borderRadius:"0 0 3px 3px" }} />
 
       <div style={{ paddingTop:8 }}>
-        <p style={{ fontSize:10, fontWeight:600, letterSpacing:"0.22em", textTransform:"uppercase",
+        <p style={{ fontSize:15, fontWeight:600, letterSpacing:"0.22em", textTransform:"uppercase",
           color:C.blue400, marginBottom:18 }}>
-          Market Intelligence
+          Market Potential Assessment
         </p>
         <h2 style={{ fontFamily:C.serif, fontSize:28, fontWeight:700, color:C.white,
           lineHeight:1.28, margin:0, letterSpacing:"-0.01em" }}>
-          Understand your market<br/>before it moves.
+          Know your market<br/>before your<br/>competitors do.
         </h2>
         <p style={{ fontSize:13, color:"rgba(255,255,255,0.6)", lineHeight:1.8, marginTop:16 }}>
           Our engine maps your sector, geography, and model — then surfaces a personalised intelligence brief within minutes.
@@ -587,13 +588,18 @@ export default function OnboardingForm({ onComplete, user }) {
     });
     if (form.email && !isEmailValid(form.email))    errs.email = "Enter a valid email address.";
     if (form.phone && !phoneOk()) errs.phone = `Invalid for ${ctry.name}. ${ctry.hint}.`;
+    if (fields.includes("problem") && form.problem.trim().length < 20) {
+  errs.problem = `At least 20 characters required (${form.problem.trim().length}/20).`;
+}
     return errs;
   }
 
   const step1ok = () =>
     STEP1.every(f => form[f] && form[f].trim?.()!=="") && isEmailValid(form.email) && phoneOk();
   const step2ok = () =>
-    STEP2.every(f => form[f] && form[f].trim?.()!=="") && form.consent===true;
+  STEP2.every(f => form[f] && form[f].trim?.()!=="")
+  && form.problem.trim().length >= 20
+  && form.consent===true;
 
   function advance() {
     if (step===1) {
@@ -640,13 +646,13 @@ export default function OnboardingForm({ onComplete, user }) {
             display:"flex", alignItems:"center", justifyContent:"center",
             fontFamily:C.mono, fontWeight:700, fontSize:10, color:C.white,
             letterSpacing:"0.05em", boxShadow:"0 2px 8px rgba(26,86,219,0.4)" }}>
-            IP
+            💡
           </div>
           <div>
             <div style={{ fontSize:12, fontWeight:700, color:C.white,
-              letterSpacing:"0.12em", textTransform:"uppercase" }}>Infopace</div>
-            <div style={{ fontSize:9, color:C.blue300, letterSpacing:"0.14em",
-              textTransform:"uppercase", marginTop:1 }}>Market Intelligence</div>
+              letterSpacing:"0.12em", textTransform:"uppercase" }}>Infopace Management Pvt Ltd</div>
+            <div style={{ fontSize:10, color:C.blue300, letterSpacing:"0.11em",
+              textTransform:"uppercase", marginTop:1 }}>Market Potential Assessment</div>
           </div>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -925,7 +931,17 @@ export default function OnboardingForm({ onComplete, user }) {
                         onChange={e => { set("problem",e.target.value); clr("problem"); }}
                         onFocus={onFocus} onBlur={onBlur(errors.problem)}
                         style={{ ...fld(errors.problem), resize:"none", minHeight:96, lineHeight:1.7 }} />
+                        <div style={{ display:"flex", justifyContent:"space-between", marginTop:4 }}>
+  <span style={{ fontSize:11, color: form.problem.trim().length>=20 ? "#059669" : C.textMuted }}>
+    {form.problem.trim().length>=20 ? "✓ Done" : "Minimum 20 characters required"}
+  </span>
+  <span style={{ fontSize:11, fontFamily:C.mono,
+    color: form.problem.trim().length>=20 ? "#059669" : C.textMuted }}>
+    {form.problem.trim().length} / 20
+  </span>
+</div>
                       <FieldErr msg={errors.problem} />
+
                     </div>
 
                     <div style={{ gridColumn:"span 2", marginTop:4 }}>
