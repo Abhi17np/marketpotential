@@ -562,7 +562,26 @@ function Sidebar() {
       {/* Top accent line */}
       <div style={{ position:"absolute", top:0, left:36, right:36, height:3, background:C.blue500, borderRadius:"0 0 3px 3px" }} />
 
-      <div style={{ paddingTop:8 }}>
+      {/* Infopace Logo */}
+      <div style={{
+        paddingTop:8,
+        display:"flex",
+        justifyContent:"center",
+        alignItems:"center",
+      }}>
+        <img src="/infopace-logo.jpg" alt="Infopace" style={{
+          width:"70%",
+          maxWidth:180,
+          height:"auto",
+          borderRadius:10,
+          objectFit:"contain",
+          background:"#fff",
+          padding:8,
+          boxShadow:"0 4px 16px rgba(26,86,219,0.25), 0 1px 4px rgba(0,0,0,0.08)",
+        }} />
+      </div>
+
+      <div style={{ paddingTop:0 }}>
         <p style={{ fontSize:15, fontWeight:600, letterSpacing:"0.22em", textTransform:"uppercase",
           color:C.blue400, marginBottom:18 }}>
           Market Potential Assessment
@@ -703,12 +722,9 @@ export default function OnboardingForm({ onComplete, user }) {
         background:"rgba(10,22,40,0.92)",
         backdropFilter:"blur(24px)" }}>
         <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-          <div style={{ width:32, height:32, background:C.blue500, borderRadius:7,
-            display:"flex", alignItems:"center", justifyContent:"center",
-            fontFamily:C.mono, fontWeight:700, fontSize:10, color:C.white,
-            letterSpacing:"0.05em", boxShadow:"0 2px 8px rgba(26,86,219,0.4)" }}>
-            💡
-          </div>
+          <img src="/infopace-logo.jpg" alt="Infopace" style={{ width:32, height:32, borderRadius:7,
+            objectFit:"contain", background:"#fff", padding:2,
+            boxShadow:"0 2px 8px rgba(26,86,219,0.4)" }} />
           <div>
             <div style={{ fontSize:12, fontWeight:700, color:C.white,
               letterSpacing:"0.12em", textTransform:"uppercase" }}>Infopace Management Pvt Ltd</div>

@@ -100,7 +100,7 @@ export default function AssessmentAndDashboard({ userData, onResult, onScreensho
       console.warn("Gemini analysis failed, falling back to offline:", err.message);
 
       // Pass null analysis — dashboard.html will run offlineAnalysis(fd) itself
-      postToIframe({ type: "INFOPACE_LOADER_STEP", step: 5, msg: "Building offline analysis…", pct: 95 });
+      postToIframe({ type: "INFOPACE_LOADER_STEP", step: 5, msg: "Building live analysis…", pct: 95 });
 
       if (onResult) {
         onResult(fd.answers || {}, {});

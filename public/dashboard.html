@@ -855,7 +855,7 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
 <div id="assessShell">
   <div class="topbar">
     <div class="tl">
-      <div class="lm">💡</div>
+      <div class="lm" style="padding:0;overflow:hidden;"><img src="/infopace-logo.jpg" alt="Infopace" style="width:100%;height:100%;object-fit:contain;border-radius:inherit;background:#fff;padding:2px;"/></div>
       <div>
         <div class="tn">Infopace Management Pvt Ltd</div>
         <div class="ts">Market Potential Assessment</div>
@@ -1047,7 +1047,7 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
 
     <!-- Logo -->
     <div class="sb-logo" style="margin-bottom:10px;">
-      <div style="width:36px;height:36px;background:#1a56db;border-radius:8px;display:grid;place-items:center;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:12px;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(26,86,219,0.4);">💡</div>
+      <img src="/infopace-logo.jpg" alt="Infopace" style="width:36px;height:36px;border-radius:8px;object-fit:contain;background:#fff;padding:2px;flex-shrink:0;box-shadow:0 2px 8px rgba(26,86,219,0.4);"/>
       <span class="sb-logo-text">Infopace</span>
     </div>
 
@@ -2852,7 +2852,7 @@ async function buildDashboard(){
     await tick(300);
   }catch(e){
     console.warn('Gemini API failed, using offline analysis:',e.message);
-    setLoader(5,'Building offline analysis…',95);
+    setLoader(5,'Building live analysis…',95);
     analysis=offlineAnalysis(fd);
     await tick(200);
   }
