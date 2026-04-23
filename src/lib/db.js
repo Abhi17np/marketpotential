@@ -74,55 +74,27 @@ export async function saveResult(submissionId, answers, result) {
   }
 }
 
-// ── Phase 3: Upload screenshot blob to Supabase Storage ──────────
-// Returns the public URL of the uploaded image, or null on failure
-export async function uploadScreenshot(submissionId, blob) {
-  if (!submissionId || !blob) return null;
-
-  try {
-    const fileName  = `${submissionId}.png`;
-    const filePath  = `screenshots/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("dashboard-screenshots")   // bucket name
-      .upload(filePath, blob, {
-        contentType:  "image/png",
-        upsert:       true,            // overwrite if re-run
-      });
-
-    if (uploadError) {
-      console.error("❌ Screenshot upload error:", uploadError.message);
-      return null;
-    }
-
-    // Get the public URL
-    const { data } = supabase.storage
-      .from("dashboard-screenshots")
-      .getPublicUrl(filePath);
-
-    const publicUrl = data?.publicUrl ?? null;
-    console.log("✅ Screenshot uploaded:", publicUrl);
-    return publicUrl;
-
-  } catch (err) {
-    console.error("❌ uploadScreenshot exception:", err.message);
-    return null;
+// ── Phase 3: Save screenshot as base64 data URL directly in DB ───
+// Stores the image inline in the screenshot_url column (text type).
+// This avoids needing a Supabase Storage bucket.
+export async function saveScreenshotDataUrl(submissionId, dataUrl) {
+  if (!submissionId || !dataUrl) {
+    console.warn("⚠️ saveScreenshotDataUrl: missing id or dataUrl");
+    return;
   }
-}
-
-// ── Phase 3b: Save the screenshot URL back to the submissions row ─
-export async function saveScreenshotUrl(submissionId, screenshotUrl) {
-  if (!submissionId || !screenshotUrl) return;
   try {
     const { error } = await supabase
       .from("submissions")
-      .update({ screenshot_url: screenshotUrl })
+      .update({ screenshot_url: dataUrl })
       .eq("id", submissionId);
 
-    if (error) console.error("❌ saveScreenshotUrl error:", error.message);
-    else        console.log("✅ Screenshot URL saved for:", submissionId);
+    if (error) {
+      console.error("❌ saveScreenshotDataUrl error:", error.message);
+    } else {
+      console.log("✅ Screenshot saved for:", submissionId, "(length:", dataUrl.length, "chars)");
+    }
   } catch (err) {
-    console.error("❌ saveScreenshotUrl exception:", err.message);
+    console.error("❌ saveScreenshotDataUrl exception:", err.message);
   }
 }
 

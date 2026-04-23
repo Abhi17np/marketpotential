@@ -3,6 +3,18 @@ import { useEffect, useRef } from "react";
 import { generateAnalysis } from "../lib/gemini";
 import { exportPdf } from "../lib/exportPdf";
 
+// ── Load html2canvas from CDN once ─────────────────────────────────
+function loadHtml2Canvas() {
+  return new Promise((resolve, reject) => {
+    if (window.html2canvas) { resolve(window.html2canvas); return; }
+    const script   = document.createElement("script");
+    script.src     = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    script.onload  = () => resolve(window.html2canvas);
+    script.onerror = () => reject(new Error("html2canvas failed to load"));
+    document.head.appendChild(script);
+  });
+}
+
 // Maps React onboarding userData → dashboard.html iframe field codes
 function buildPrefill(userData) {
   const SECTOR_MAP = {
@@ -49,7 +61,8 @@ const LOADER_STEPS = [
 ];
 
 // ── onResult(answers, result) is called by App.jsx to save to Supabase
-export default function AssessmentAndDashboard({ userData, onResult, onRestart }) {
+// ── onScreenshot(blob) is called by App.jsx to upload the dashboard image
+export default function AssessmentAndDashboard({ userData, onResult, onScreenshot, onRestart }) {
   const iframeRef       = useRef(null);
   const prefillSentRef  = useRef(false);
   const latestResultRef = useRef(null);
@@ -80,6 +93,9 @@ export default function AssessmentAndDashboard({ userData, onResult, onRestart }
       // Render dashboard in iframe with AI result
       postToIframe({ type: "INFOPACE_RENDER", fd, analysis: result });
 
+      // ── Capture screenshot after dashboard renders (with delay for animations) ──
+      captureAndUpload();
+
     } catch (err) {
       console.warn("Gemini analysis failed, falling back to offline:", err.message);
 
@@ -92,7 +108,50 @@ export default function AssessmentAndDashboard({ userData, onResult, onRestart }
 
       setTimeout(() => {
         postToIframe({ type: "INFOPACE_RENDER", fd, analysis: null });
+        // Capture screenshot even for offline analysis
+        captureAndUpload();
       }, 600);
+    }
+  }
+
+  // ── Capture the rendered dashboard and save as base64 data URL ──
+  async function captureAndUpload() {
+    if (!onScreenshot) return;
+    try {
+      // Wait for Chart.js animations and rendering to finish
+      await new Promise(r => setTimeout(r, 3000));
+
+      const html2canvas = await loadHtml2Canvas();
+      const iframeDoc = iframeRef.current?.contentDocument
+                     || iframeRef.current?.contentWindow?.document;
+      if (!iframeDoc) {
+        console.warn("⚠️ captureAndUpload: cannot access iframe document");
+        return;
+      }
+
+      // Target the charts view or fall back to the full dashboard
+      const target = iframeDoc.getElementById("viewCharts")
+                  || iframeDoc.getElementById("dashShell")
+                  || iframeDoc.body;
+
+      const canvas = await html2canvas(target, {
+        useCORS:         true,
+        allowTaint:      true,
+        scale:           1.5,            // balance quality vs size
+        backgroundColor: "#EEF2F7",
+        logging:         false,
+      });
+
+      // Convert canvas to base64 data URL and send to App.jsx
+      const dataUrl = canvas.toDataURL("image/png", 0.85);
+      if (dataUrl && dataUrl.length > 100) {
+        console.log("📸 Dashboard screenshot captured, length:", dataUrl.length, "chars");
+        onScreenshot(dataUrl);
+      } else {
+        console.warn("⚠️ Screenshot capture produced empty result");
+      }
+    } catch (err) {
+      console.warn("⚠️ Screenshot capture failed:", err.message);
     }
   }
 

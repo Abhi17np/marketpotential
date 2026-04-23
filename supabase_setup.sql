@@ -48,6 +48,9 @@ create table if not exists public.submissions (
   quick_wins      jsonb,      -- array of quick win strings
   analysis_json   jsonb,      -- full raw analysis object
 
+  -- ── Screenshot URL (stored in Supabase Storage) ─────────────
+  screenshot_url  text,       -- public URL of captured dashboard image
+
   -- ── Status tracking ─────────────────────────────────────────
   status          text        default 'onboarding_complete',
   -- 'onboarding_complete' = form filled, assessment not yet done

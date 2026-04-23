@@ -219,18 +219,79 @@ function AnimatedBackground() {
       return { verts, edges };
     }
 
-    // Initialise shape instances
+    // Icosahedron
+    function makeIcosahedron(size) {
+      const t = (1 + Math.sqrt(5)) / 2;
+      const s = size / Math.sqrt(1 + t * t);
+      const verts = [
+        [-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],
+        [0,-1,t],[0,1,t],[0,-1,-t],[0,1,-t],
+        [t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1],
+      ].map(([x,y,z]) => [x*s,y*s,z*s]);
+      const edges = [
+        [0,1],[0,5],[0,7],[0,10],[0,11],
+        [1,5],[1,7],[1,8],[1,9],
+        [2,3],[2,4],[2,6],[2,10],[2,11],
+        [3,4],[3,6],[3,8],[3,9],
+        [4,5],[4,9],[4,11],
+        [5,9],[5,11],
+        [6,7],[6,8],[6,10],
+        [7,8],[7,10],
+        [8,9],[10,11],
+      ];
+      return { verts, edges };
+    }
+
+    // Torus ring
+    function makeTorus(R, r, segs = 10, rings = 14) {
+      const verts = [];
+      const edges = [];
+      for (let i = 0; i < rings; i++) {
+        const theta = (i / rings) * Math.PI * 2;
+        for (let j = 0; j < segs; j++) {
+          const phi = (j / segs) * Math.PI * 2;
+          verts.push([
+            (R + r * Math.cos(phi)) * Math.cos(theta),
+            r * Math.sin(phi),
+            (R + r * Math.cos(phi)) * Math.sin(theta),
+          ]);
+          edges.push([i * segs + j, i * segs + (j + 1) % segs]);
+          edges.push([i * segs + j, ((i + 1) % rings) * segs + j]);
+        }
+      }
+      return { verts, edges };
+    }
+
+    // Pyramid
+    function makePyramid(size) {
+      const b = size * 0.65, h = size;
+      const verts = [[-b,b*0.5,-b],[b,b*0.5,-b],[b,b*0.5,b],[-b,b*0.5,b],[0,-h,0]];
+      const edges = [[0,1],[1,2],[2,3],[3,0],[0,4],[1,4],[2,4],[3,4]];
+      return { verts, edges };
+    }
+
+    // Initialise shape instances — 8 shapes, same style as original
     const SHAPES = [
-      { ...makeCube(70),        cx: 0, cy: 0, rx: 0.003, ry: 0.005, rz: 0.002, angX: 0.4, angY: 0.2 },
-      { ...makeOctahedron(55),  cx: 0, cy: 0, rx: 0.004, ry: 0.003, rz: 0.003, angX: 1.0, angY: 0.8 },
-      { ...makeTetrahedron(62), cx: 0, cy: 0, rx: 0.003, ry: 0.006, rz: 0.001, angX: 2.1, angY: 1.4 },
+      { ...makeCube(70),          rx: 0.003, ry: 0.005, rz: 0.002, angX: 0.4,  angY: 0.2  },
+      { ...makeOctahedron(55),    rx: 0.004, ry: 0.003, rz: 0.003, angX: 1.0,  angY: 0.8  },
+      { ...makeTetrahedron(62),   rx: 0.003, ry: 0.006, rz: 0.001, angX: 2.1,  angY: 1.4  },
+      { ...makeIcosahedron(58),   rx: 0.002, ry: 0.004, rz: 0.002, angX: 0.7,  angY: 1.9  },
+      { ...makeTorus(40,13),      rx: 0.005, ry: 0.003, rz: 0.002, angX: 0.3,  angY: 0.5  },
+      { ...makePyramid(55),       rx: 0.003, ry: 0.005, rz: 0.001, angX: 1.6,  angY: 0.9  },
+      { ...makeCube(48),          rx: 0.004, ry: 0.003, rz: 0.003, angX: 3.0,  angY: 2.4  },
+      { ...makeOctahedron(42),    rx: 0.006, ry: 0.002, rz: 0.004, angX: 0.1,  angY: 2.2  },
     ];
 
-    // Positions spread across canvas — initialised in draw when W/H are set
+    // Positions spread across the full canvas
     const shapePositions = [
       { fx: 0.12, fy: 0.25 },
       { fx: 0.88, fy: 0.65 },
       { fx: 0.55, fy: 0.12 },
+      { fx: 0.80, fy: 0.18 },
+      { fx: 0.15, fy: 0.72 },
+      { fx: 0.93, fy: 0.40 },
+      { fx: 0.42, fy: 0.82 },
+      { fx: 0.68, fy: 0.50 },
     ];
 
     // ── Ripple trails ──

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Infopace — Market Intelligence Platform</title>
+<title>Infopace — Market Potential Assessment</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -181,8 +181,173 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
 .geo-stat-v { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: var(--b600); }
 .geo-stat-l { font-size: 8px; color: #6080a0; text-transform: uppercase; letter-spacing: .06em; margin-top: 1px; }
 
-@media (max-width: 1000px) { .assess-cols { grid-template-columns: 1fr; } .live-panel { position: static; } }
-@media (max-width: 640px) { .steps { flex-wrap: wrap; } .fg { grid-template-columns: 1fr; } .fd.s2 { grid-column: span 1; } .ckg { grid-template-columns: 1fr 1fr; } }
+/* ══════════════════════════════════════════
+   RESPONSIVE — TABLET (≤1000px)
+══════════════════════════════════════════ */
+@media (max-width: 1000px) {
+  .assess-cols { grid-template-columns: 1fr; }
+  .live-panel { position: static; }
+  .assess-inner { padding: 20px 16px 60px; }
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — MOBILE (≤640px)
+══════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .steps { flex-wrap: wrap; }
+  .fg { grid-template-columns: 1fr; }
+  .fd.s2 { grid-column: span 1; }
+  .ckg { grid-template-columns: 1fr 1fr; }
+  .hero h1 { font-size: 22px; }
+  .topbar { padding: 0 12px; height: 48px; }
+  .sec { padding: 18px 14px 14px; }
+  .fnav { padding: 12px 14px; }
+}
+
+/* ══════════════════════════════════════════
+   DASHBOARD RESPONSIVE — TABLET (≤1024px)
+══════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  /* Sidebar collapses to icon bar */
+  #outputSidebar {
+    width: 52px !important;
+  }
+  #outputSidebar:hover {
+    width: 180px !important;
+  }
+  #viewCharts, #viewReport {
+    left: 52px !important;
+    width: calc(100vw - 52px) !important;
+  }
+
+  /* Dashboard grid: 2 rows of 2 + bottom row */
+  .dash {
+    grid-template-columns: repeat(4, 1fr) !important;
+    grid-template-rows: 52px auto auto auto !important;
+    padding: 6px 8px !important;
+    gap: 6px !important;
+    overflow-y: auto !important;
+    height: auto !important;
+  }
+
+  .hdr { grid-column: 1 / -1 !important; }
+
+  /* Cards: 2-col on tablet */
+  .card:not(.card-trend):not(.card-map) {
+    grid-column: span 2 !important;
+  }
+  .card-trend { grid-column: span 4 !important; }
+  .card-map   { grid-column: span 4 !important; }
+
+  /* Trend: stack meta + chart vertically */
+  .trend-body { flex-direction: column !important; gap: 8px !important; }
+  .trend-meta { width: 100% !important; flex-direction: row !important; justify-content: space-around !important; gap: 8px !important; }
+  .trend-chart { margin-right: 0 !important; height: 160px !important; }
+  .trend-end-labels { display: none !important; }
+
+  /* Header KPIs: smaller text */
+  .hdr-kpi-v { font-size: 12px !important; }
+  .hdr-kpi-l { font-size: 6px !important; }
+  .hdr-badge { font-size: 8px !important; padding: 3px 8px !important; }
+
+  /* Donut: shrink SVG */
+  #donut-svg { width: 140px !important; height: 140px !important; }
+  .donut-body { gap: 8px !important; }
+
+  /* Radar legend hidden on tablet to give radar more space */
+  #radar-leg { display: none !important; }
+}
+
+/* ══════════════════════════════════════════
+   DASHBOARD RESPONSIVE — MOBILE (≤768px)
+══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Full-width sidebar at bottom on mobile */
+  #outputSidebar {
+    position: fixed !important;
+    left: 0 !important; top: auto !important; bottom: 0 !important;
+    width: 100vw !important; height: 52px !important;
+    flex-direction: row !important;
+    padding: 0 8px !important;
+    gap: 4px !important;
+    z-index: 30 !important;
+    border-right: none !important;
+    border-top: 1px solid rgba(59,130,246,0.2) !important;
+    box-shadow: 0 -2px 16px rgba(6,18,40,0.4) !important;
+    overflow: visible !important;
+  }
+  #outputSidebar:hover { width: 100vw !important; height: 52px !important; }
+  #outputSidebar .sb-logo { display: none !important; }
+  #outputSidebar .sb-divider { display: none !important; }
+  #outputSidebar .sb-section-lbl { display: none !important; }
+  #outputSidebar .sb-btn {
+    height: 44px !important; flex: 1 !important;
+    margin: 0 2px !important;
+    width: auto !important;
+    justify-content: center !important;
+    padding: 0 8px !important;
+  }
+  #outputSidebar .sb-icon { width: 20px !important; }
+  #outputSidebar .sb-label { display: none !important; }
+  #outputSidebar .sb-bottom-label { display: none !important; }
+  /* "New" and "Download" buttons — show in row too */
+  #outputSidebar > button { flex: 1 !important; margin: 0 2px !important; opacity: 1 !important; }
+
+  /* Charts/report views: full width, leave room for bottom nav */
+  #viewCharts, #viewReport {
+    left: 0 !important; top: 0 !important;
+    width: 100vw !important;
+    height: calc(100vh - 52px) !important;
+  }
+
+  /* Dashboard grid: single column */
+  .dash {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto !important;
+    padding: 6px 6px 60px !important;
+    gap: 8px !important;
+    overflow-y: auto !important;
+    height: auto !important;
+  }
+
+  .hdr { grid-column: 1 / -1 !important; border-radius: 8px !important; min-height: 60px !important; flex-wrap: wrap !important; padding: 8px 12px !important; gap: 4px !important; }
+  .hdr-stats { flex-wrap: wrap !important; gap: 4px !important; justify-content: flex-end !important; }
+  .hdr-kpi { padding: 0 8px !important; }
+  .hdr-kpi-v { font-size: 11px !important; }
+  .hdr-kpi-l { font-size: 5.5px !important; }
+  .hdr-badge { font-size: 8px !important; margin-left: 6px !important; }
+  .hdr-brand { font-size: 10px !important; }
+  .hdr-title { font-size: 10px !important; }
+  .hdr-actions { gap: 4px !important; margin-left: 8px !important; }
+  .hdr-btn { padding: 5px 8px !important; font-size: 9px !important; }
+
+  /* All cards: full width */
+  .card, .card-trend, .card-map {
+    grid-column: 1 / -1 !important;
+    min-height: 220px !important;
+  }
+  .card-map { min-height: 260px !important; }
+  .card-trend { min-height: 240px !important; }
+
+  /* Donut: smaller */
+  #donut-svg { width: 110px !important; height: 110px !important; }
+  .donut-body { flex-direction: row !important; gap: 8px !important; align-items: center !important; }
+  .dleg-nm { font-size: 9px !important; }
+  .dleg-val { font-size: 8.5px !important; }
+
+  /* Trend: stacked */
+  .trend-body { flex-direction: column !important; gap: 6px !important; }
+  .trend-meta { width: 100% !important; flex-direction: row !important; justify-content: space-around !important; flex-wrap: wrap !important; gap: 6px !important; }
+  .trend-chart { margin-right: 0 !important; min-height: 120px !important; }
+  .trend-end-labels { display: none !important; }
+
+  /* Radar legend hidden */
+  #radar-leg { display: none !important; }
+
+  /* Popup: full screen on mobile */
+  .pop { width: 96% !important; max-width: 96% !important; border-radius: 8px !important; }
+  .pb { max-height: 60vh !important; }
+}
 
 
 /* ══════════════════════════════════════════
@@ -220,7 +385,7 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
 }
 .dash {
   display: grid;
-  width: 100%; height: 100%;
+  width: 100%; min-height: 100%;
   grid-template-rows: 52px 1fr 1fr;
   grid-template-columns: repeat(6, 1fr);
   gap: 8px;
@@ -704,7 +869,7 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
 
   <div class="assess-inner">
     <div class="hero">
-      <h1>Market <em>Potential</em><br>Assessment</h1>
+      <h1>Market Potential Assessment</h1>
       <p>Describe your product. Our AI reads your sector, geography and business type — then generates custom questions and a personalised market intelligence dashboard.</p>
     </div>
 
@@ -834,7 +999,7 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
           <div class="lc-ttl" style="margin-bottom:12px">Dimension Scores</div>
           <div class="bar-list">
             <div class="bi"><div class="bi-hd"><span>Market Size</span><span id="d1lbl">—</span></div><div class="bt"><div class="bf" id="bf1" style="background:#1a56db;width:0%"></div></div></div>
-            <div class="bi"><div class="bi-hd"><span>Audience Quality</span><span id="d2lbl">—</span></div><div class="bt"><div class="bf" id="bf2" style="background:#bb00ff;width:0%"></div></div></div>
+            <div class="bi"><div class="bi-hd"><span>Audience Quality</span><span id="d2lbl">—</span></div><div class="bt"><div class="bf" id="bf2" style="background:#86198f;width:0%"></div></div></div>
             <div class="bi"><div class="bi-hd"><span>Competition Edge</span><span id="d3lbl">—</span></div><div class="bt"><div class="bf" id="bf3" style="background:#10b981;width:0%"></div></div></div>
             <div class="bi"><div class="bi-hd"><span>Revenue Potential</span><span id="d4lbl">—</span></div><div class="bt"><div class="bf" id="bf4" style="background:#f43f5e;width:0%"></div></div></div>
             <div class="bi"><div class="bi-hd"><span>Risk Profile</span><span id="d5lbl">—</span></div><div class="bt"><div class="bf" id="bf5" style="background:#f97316;width:0%"></div></div></div>
@@ -875,14 +1040,14 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
      Row 2: Card1 Donut (span 2) | Card2 Bar (span 2) | Card3 Radar (span 2)
      Row 3: Card4 Trend (span 3) | Card5 Map (span 3)
 ═══════════════════════════════════════════════════════ -->
-<div id="dashShell" style="display:none;position:fixed;inset:0;background:#f0f4ff;font-family:'Inter',sans-serif;">
+<div id="dashShell" style="display:none;position:fixed;inset:0;background:#f0f4ff;font-family:'Inter',sans-serif;overflow:hidden;">
 
   <!-- SIDEBAR — collapses to 64px, expands to 180px on hover -->
   <div id="outputSidebar" style="position:fixed;left:0;top:0;height:100vh;width:64px;background:#061228;display:flex;flex-direction:column;padding:12px 0;gap:6px;flex-shrink:0;z-index:20;box-shadow:2px 0 20px rgba(6,18,40,0.5);border-right:1px solid rgba(59,130,246,0.12);">
 
     <!-- Logo -->
     <div class="sb-logo" style="margin-bottom:10px;">
-      <div style="width:36px;height:36px;background:#1a56db;border-radius:8px;display:grid;place-items:center;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:12px;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(26,86,219,0.4);">IP</div>
+      <div style="width:36px;height:36px;background:#1a56db;border-radius:8px;display:grid;place-items:center;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:12px;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(26,86,219,0.4);">💡</div>
       <span class="sb-logo-text">Infopace</span>
     </div>
 
@@ -932,7 +1097,7 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
   </div><!-- end outputSidebar -->
 
   <!-- VIEW 1: CHARTS DASHBOARD -->
-  <div id="viewCharts" style="position:fixed;left:64px;top:0;width:calc(100vw - 64px);height:100vh;overflow:hidden;display:flex;flex-direction:column;transition:left 0.3s cubic-bezier(0.4,0,0.2,1),width 0.3s cubic-bezier(0.4,0,0.2,1);">
+  <div id="viewCharts" style="position:fixed;left:64px;top:0;width:calc(100vw - 64px);height:100vh;overflow:auto;display:flex;flex-direction:column;transition:left 0.3s cubic-bezier(0.4,0,0.2,1),width 0.3s cubic-bezier(0.4,0,0.2,1);">
 <div class="dash">
 
   <!-- HEADER -->
@@ -1051,17 +1216,34 @@ input[type=range] { padding: 0; border: none; background: transparent; accent-co
 ══════════════════════════════════════════════════════ */
 (function(){
   const SB_COLLAPSED = 64, SB_EXPANDED = 200;
+  const MOBILE_BP = 768;
+
+  function isMobile() { return window.innerWidth <= MOBILE_BP; }
+
   function syncViews(w) {
     const charts = document.getElementById('viewCharts');
     const report = document.getElementById('viewReport');
-    if (charts) { charts.style.left = w + 'px'; charts.style.width = 'calc(100vw - ' + w + 'px)'; }
-    if (report) { report.style.left = w + 'px'; report.style.width = 'calc(100vw - ' + w + 'px)'; }
+    if (isMobile()) {
+      // Mobile: sidebar is at the bottom, views take full width
+      if (charts) { charts.style.left = '0'; charts.style.width = '100vw'; charts.style.height = 'calc(100vh - 52px)'; charts.style.top = '0'; }
+      if (report) { report.style.left = '0'; report.style.width = '100vw'; report.style.height = 'calc(100vh - 52px)'; report.style.top = '0'; }
+    } else {
+      // Tablet/Desktop: sidebar on the left
+      const sbW = window.innerWidth <= 1024 ? 52 : w;
+      if (charts) { charts.style.left = sbW + 'px'; charts.style.width = 'calc(100vw - ' + sbW + 'px)'; charts.style.height = '100vh'; charts.style.top = '0'; }
+      if (report) { report.style.left = sbW + 'px'; report.style.width = 'calc(100vw - ' + sbW + 'px)'; report.style.height = '100vh'; report.style.top = '0'; }
+    }
   }
+
   document.addEventListener('DOMContentLoaded', function() {
     const sb = document.getElementById('outputSidebar');
     if (!sb) return;
-    sb.addEventListener('mouseenter', function() { syncViews(SB_EXPANDED); });
+    sb.addEventListener('mouseenter', function() { if (!isMobile()) syncViews(SB_EXPANDED); });
     sb.addEventListener('mouseleave', function() { syncViews(SB_COLLAPSED); });
+    // Sync on resize
+    window.addEventListener('resize', function() { syncViews(SB_COLLAPSED); });
+    // Initial sync
+    syncViews(SB_COLLAPSED);
   });
 })();
 
@@ -1079,9 +1261,9 @@ Chart.defaults.font.family="'Inter',sans-serif";
 Chart.defaults.color='#6080a0';
 
 // Distinct palette — each series visually unmistakable at a glance
-// [0] Our product: strong blue  [1] Comp1: electric fuchsia #bb00ff  [2] Comp2: emerald
+// [0] Our product: strong blue  [1] Comp1: electric fuchsia #86198f  [2] Comp2: emerald
 // [3] Comp3: violet  [4] Comp4: rose  [5] Comp5: cyan  [6] extra  [7] extra
-const PAL=['#1a56db','#bb00ff','#10b981','#8b5cf6','#f43f5e','#06b6d4','#f97316','#a3e635'];
+const PAL=['#1a56db','#86198f','#10b981','#8b5cf6','#f43f5e','#06b6d4','#f97316','#a3e635'];
 const PAL_GLOW=['rgba(26,86,219,0.8)','rgba(187,0,255,0.8)','rgba(16,185,129,0.8)','rgba(139,92,246,0.8)','rgba(244,63,94,0.8)','rgba(6,182,212,0.8)','rgba(249,115,22,0.8)','rgba(163,230,53,0.8)'];
 const rga=(h,a)=>{const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return `rgba(${r},${g},${b},${a})`;};
 const GL={color:'rgba(17,68,160,0.07)',lineWidth:0.6};
@@ -1342,8 +1524,15 @@ function calcLive(){
     if(!on)return;
     const v=+(on.dataset.val)||3;
     const id=grp.id||'';
-    const prefix=id.slice(0,2);
-    const dim=dimMap[prefix]||'d1';
+const prefix=id.replace(/_pills$/,'').slice(0,2);
+// Fall back: find nearest parent #q1–#q8 container
+const dim=dimMap[prefix]||(()=>{
+  const secEl=grp.closest('.sec')||grp.closest('[id^="q"]');
+  const rawId=secEl?secEl.id:'';
+  const secNum=rawId?+(rawId.replace('sec','').replace('q',''))||1:1;
+  const secDimKeys=['d1','d2','d3','d4','d5','d4','d2','d6'];
+  return secDimKeys[secNum-1]||'d1';
+})();
     (selScores[dim]=selScores[dim]||[]).push({v,w:2});
   });
 
@@ -1359,12 +1548,13 @@ function calcLive(){
   // ── Calculate each dimension score (0-100) ────────────
   function dimScore(key){
     const items=selScores[key]||[];
-    if(!items.length)return null; // not yet answered
+    if(!items.length)return null;
     const totalW=items.reduce((s,i)=>s+i.w,0);
     const weighted=items.reduce((s,i)=>s+(i.v*i.w),0);
-    // weighted average on 1-5 scale → convert to 0-100
-    const raw = ((weighted/totalW)-1)/4; // 0.0–1.0
-return Math.round(Math.pow(raw, 0.85) * 100);
+    const avg=weighted/totalW; // 1.0–5.0
+    const linear=(avg-1)/4*100; // 0–100
+    // Full range: low answers score low, high answers score high
+    return Math.min(100, Math.max(0, Math.round(linear<25 ? linear*0.8 : linear>75 ? 75+(linear-75)*1.0 : linear)));
   }
 
   const d1=dimScore('d1'); // Market Size
@@ -1397,15 +1587,12 @@ return Math.round(Math.pow(raw, 0.85) * 100);
 
     // Context bonus adds up to 15 points on top of dim average
     // But only if at least 2 sections answered
-    const bonus=answeredDims.length>=2?Math.round(contextBonus/15*15):0;
-   overall = Math.min(100, Math.round(dimAvg * 0.95 + Math.round(contextBonus * 0.3)));
-    // At the bottom of calcLive(), after computing `overall`:
+    const bonus=answeredDims.length>=2?Math.round(contextBonus*0.25):0;
+    overall=Math.min(100,Math.round(dimAvg+bonus));
 
     // Penalty: if less than 3 sections answered, cap score at 60
-    if(answeredDims.length<3)overall=Math.min(overall,60);
-    window._liveOverallScore = overall;  // ← ADD THIS LINE
-    // Penalty: if problem statement too short, cap at 70
-    // removed artificial 70 cap — score reflects actual answers
+    // if(answeredDims.length<3)overall=Math.min(overall,60);
+    window._liveOverallScore=overall>0?overall:null;
   }
 
   // ── Count completion progress ──────────────────────────
@@ -1477,7 +1664,7 @@ return Math.round(Math.pow(raw, 0.85) * 100);
 
   // ── Update individual dimension bars ──────────────────
   const dimVals=[d1,d2,d3,d4,d5,d6];
-  const dimColors=['#1a56db','#bb00ff','#10b981','#f43f5e','#f97316','#06b6d4'];
+  const dimColors=['#1a56db','#86198f','#10b981','#f43f5e','#f97316','#06b6d4'];
   ['bf1','bf2','bf3','bf4','bf5','bf6'].forEach((id,i)=>{
     const el=document.getElementById(id);
     if(!el)return;
@@ -1785,7 +1972,10 @@ function renderSection(idx,sec){
       html+=`</select>`;
     }else if(q.type==='pills'){
       html+=`<div class="pills ai-pills" id="${q.id}_pills">`;
-      (q.options||[]).forEach(o=>{html+=`<span class="pill" data-val="${o.v||3}" onclick="pickAIPill(this)">${o.t}</span>`;});
+      (q.options||[]).forEach((o,oi,arr)=>{
+  const autoV = o.v || Math.round(5 - (oi/(Math.max(arr.length-1,1)))*4);
+  html+=`<span class="pill" data-val="${autoV}" onclick="pickAIPill(this)">${o.t}</span>`;
+});
       html+=`</div>`;
     }else if(q.type==='checks'){
       html+=`<div class="ckg">`;
@@ -3026,7 +3216,11 @@ Object.entries(fd.answers || {}).forEach(([key, val]) => {
 const dimAvg = key => {
   const items = buckets[key];
   if (!items.length) return null;
-  return Math.round(((items.reduce((a,b)=>a+b,0)/items.length) - 1) / 4 * 100);
+  const avg = items.reduce((a,b)=>a+b,0)/items.length; // 1.0–5.0
+  const linear = (avg-1)/4*100; // 0–100
+  // Stretch: floor at 40, push high scores up
+// Full range: low answers score low, high answers score high
+  return Math.min(100, Math.max(0, Math.round(linear<25 ? linear*0.8 : linear>75 ? 75+(linear-75)*1.0 : linear)));
 };
 
 const computedDims = {
@@ -3041,17 +3235,19 @@ const stageIdx2   = ['idea','mvp','pilot','paying','scaling'].findIndex(k => (fd
 const contextBonus = (fd.sectorCode ? 3 : 0) + (fd.bizTypeCode ? 3 : 0) + (fd.geoCode ? 2 : 0) + probScore2 + Math.min(Math.max(stageIdx2,0), 5);
 
 const answeredDims = [computedDims.d1, computedDims.d2, computedDims.d3, computedDims.d4, computedDims.d5, computedDims.d6].filter(v => v !== null);
-let t = 0; // default if no answers
+let t = 0;
 if (answeredDims.length > 0) {
   const weights = [15, 20, 25, 25, 10, 5];
   const allD    = [computedDims.d1, computedDims.d2, computedDims.d3, computedDims.d4, computedDims.d5, computedDims.d6];
   let wSum = 0, wTotal = 0;
   allD.forEach((v, i) => { if (v !== null) { wSum += v * weights[i]; wTotal += weights[i]; } });
-  const bonus = answeredDims.length >= 2 ? Math.round(contextBonus * 0.3) : 0;
-  t = Math.min(100, Math.round((wSum / wTotal) * 0.95 + Math.round(bonus * 0.3)));
-  if (answeredDims.length < 3) t = Math.min(t, 60);
-  // removed artificial 70 cap — score reflects actual answers
+const bonus = answeredDims.length >= 1 ? Math.round(contextBonus * 0.25) : 0;
+  t = Math.min(100, Math.round((wSum/wTotal) + bonus));
 }
+
+// Sync live score panel with the final computed score
+const lsEl2 = document.getElementById('liveScore');
+if (lsEl2) lsEl2.textContent = t;
 
 // Also update the liveScore DOM element so it stays in sync
 // const lsEl2 = document.getElementById('liveScore');
@@ -3311,9 +3507,9 @@ if (answeredDims.length > 0) {
   // Competitor trends — driven by competition-edge score (d3)
   // High competition score = competitor curves flatter (we're closing gap)
   // Low competition score = competitors stable/growing (entrenched)
-  const c1Base  = Math.min(rem * spl[0], 32);
-const c2Base  = Math.min(rem * spl[1], 28);
-const c3Base  = Math.min(rem * spl[2], 24);
+  const c1Base = Math.min(rem * spl[0], 40);
+const c2Base = Math.min(rem * spl[1], 35);
+const c3Base = Math.min(rem * spl[2], 30);
   // Competition edge: high d3 = incumbent slightly declining, low d3 = incumbent stable/growing
   const d3Norm    = (dims.d3 !== null ? dims.d3 : 50) / 100; // 0–1
   const c1Growth  = 0.005 + (1 - d3Norm) * 0.008; // low edge = competitors growing faster
@@ -3490,7 +3686,7 @@ function renderDash(fd,a){
   const scoreCol=a.overallScore>=70?'#6ee7b7':a.overallScore>=50?'#93c5fd':'#fca5a5';
   document.getElementById('dhTitle').textContent=`${biz} · Market Potential Assessment`;
   const liveTag=a.realTimeInsight?' · 🟢 AI-Powered Live Data':'';
-  document.getElementById('dhSub').textContent=`${fd.sector} · ${fd.bizType} · ${fd.geo}${liveTag} · Infopace Management Pvt Ltd`;
+  document.getElementById('dhSub').textContent=`${fd.sector} · ${fd.bizType} · ${fd.geo}${liveTag} `;
   // Smart merge: use AI data where present, fill gaps from offline fallback
   // This means real Gemini data is always shown, nothing is silently replaced
   const offline=offlineAnalysis(fd);
@@ -3499,9 +3695,8 @@ function renderDash(fd,a){
   a.tamCrore    = merge(a.tamCrore,    offline.tamCrore);
   a.samCrore    = merge(a.samCrore,    offline.samCrore);
   a.somCrore    = merge(a.somCrore,    offline.somCrore);
-  const liveEl = document.getElementById('liveScore');
-const liveScore = liveEl ? parseInt(liveEl.textContent) : null;
-a.overallScore = merge(a.overallScore, (liveScore && liveScore > 0) ? liveScore : offline.overallScore);
+  const liveScore = (window._liveOverallScore && window._liveOverallScore > 0) ? window._liveOverallScore : null;
+  a.overallScore = merge(a.overallScore, liveScore || offline.overallScore);
   a.growthRate  = merge(a.growthRate,  offline.growthRate);
   a.grade       = merge(a.grade,       offline.grade);
   a.verdict     = merge(a.verdict,     offline.verdict);
@@ -3673,8 +3868,8 @@ else if(/^\d+(\.\d+)?$/.test(dispVal.trim())){
         },
         {
           label:'Projected 2027',data:p27,
-          backgroundColor:rga('#bb00ff',0.80),
-          borderColor:'#bb00ff',borderWidth:0,
+          backgroundColor:rga('#86198f',0.80),
+          borderColor:'#86198f',borderWidth:0,
           borderRadius:{topLeft:4,topRight:4},borderSkipped:false
         },
         {
@@ -3836,7 +4031,7 @@ else if(/^\d+(\.\d+)?$/.test(dispVal.trim())){
   });
 
   // Pad to at least 3 series (product + 2 competitors) using marketShare data
-  while(rawShare.length<3){
+  while(rawShare.length<4){
     const idx=rawShare.length; // 1, 2, 3...
     const comp=a.marketShare?.[idx]||a.competitorProfiles?.[idx-1];
     if(!comp)break;
@@ -3874,7 +4069,7 @@ else if(/^\d+(\.\d+)?$/.test(dispVal.trim())){
       // Competitors: use Gemini data if valid
       // Only override if data is missing or completely flat
       if(!validVals.length||mx===0){
-        const share=a.marketShare?.[i]?.pct||20;
+        const share = a.marketShare?.[i]?.pct || a.marketShare?.[i]?.marketSharePct || (30 - i * 5);
         const gr=(a.growthRate||20)/100;
         data=Array.from({length:12},(_,m)=>{
           const t=m/11;
@@ -3900,8 +4095,8 @@ else if(/^\d+(\.\d+)?$/.test(dispVal.trim())){
   const allVals=shapedSeries.flatMap(s=>s.data);
   const ourPeak = Math.max(...(shapedSeries[0]?.data||[0]));
   const compPeak = Math.max(...shapedSeries.slice(1).flatMap(s=>s.data), 0);
-  const effectiveMax = compPeak > ourPeak * 3 ? Math.max(ourPeak * 3.2, compPeak * 0.65) : Math.max(...allVals);
-  const yMax = Math.ceil(effectiveMax * 1.2 / 5) * 5;  // always a clean multiple of 5
+  const effectiveMax = Math.max(...allVals);
+  const yMax = Math.ceil(effectiveMax * 1.25 / 5) * 5;  // always a clean multiple of 5
 
   // Build datasets
   const trendDatasets=shapedSeries.map((s,i)=>({
@@ -4567,12 +4762,12 @@ function buildReport(){
     const dimDefs=[
       {k:'marketSize',l:'Market Size',c:'#1144a0',w:15},
       {k:'audienceQuality',l:'Audience Quality',c:'#3b82f6',w:20},
-      {k:'competitionEdge',l:'Competitive Edge',c:'#bb00ff',w:25},
+      {k:'competitionEdge',l:'Competitive Edge',c:'#86198f',w:25},
       {k:'revenuePotential',l:'Revenue Potential',c:'#0f3460',w:25},
       {k:'riskProfile',l:'Risk Management',c:'#7c3aed',w:10},
       {k:'sectorFit',l:'Sector Alignment',c:'#059669',w:5},
     ];
-    const rptPal=['#1a56db','#bb00ff','#10b981','#8b5cf6','#f43f5e','#06b6d4'];
+    const rptPal=['#1a56db','#86198f','#10b981','#8b5cf6','#f43f5e','#06b6d4'];
 
     /* ═══ SVG HELPERS ═══════════════════════════════════════ */
 
@@ -4765,7 +4960,7 @@ const scY = cy - R * Math.sin(angle);
         {l:wins3[0]?wins3[0].replace(/[₹]/g,'Rs').slice(0,38):'Define North Star Metric & Track OKRs',start:0,dur:2,c:'#059669',type:'win'},
         {l:wins3[1]?wins3[1].replace(/[₹]/g,'Rs').slice(0,38):'Run Structured Customer Discovery Sessions',start:1,dur:3,c:'#1144a0',type:'win'},
         {l:wins3[2]?wins3[2].replace(/[₹]/g,'Rs').slice(0,38):'Validate & Lock Pricing Architecture',start:3,dur:3,c:'#3b82f6',type:'win'},
-        {l:'Competitor Deep-Dive Intelligence',start:0,dur:4,c:'#bb00ff',type:'research'},
+        {l:'Competitor Deep-Dive Intelligence',start:0,dur:4,c:'#86198f',type:'research'},
         {l:'Build GTM Beachhead Strategy',start:5,dur:4,c:'#0f3460',type:'strategy'},
         {l:'Close First 3 Paying Pilots',start:7,dur:5,c:'#7c3aed',type:'revenue'},
       ];
@@ -4866,7 +5061,7 @@ const scY = cy - R * Math.sin(angle);
       <div>
         <div style="font-size:8px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:rgba(147,197,253,0.45);margin-bottom:18px;display:flex;align-items:center;gap:10px;">
           <span style="display:inline-block;width:20px;height:1px;background:rgba(147,197,253,0.25);"></span>
-          Infopace Management Pvt Ltd &nbsp;·&nbsp; Market Intelligence Platform
+          Infopace Management Pvt Ltd &nbsp;·&nbsp; Market Potential Assessment
         </div>
         <div style="font-size:42px;font-weight:700;color:#dbeafe;line-height:1.0;letter-spacing:-.03em;margin-bottom:12px;">${esc(biz)}</div>
         <div style="font-size:13px;color:rgba(191,219,254,0.85);margin-bottom:24px;letter-spacing:.02em;">${esc(fd.sector)} &nbsp;&nbsp;/&nbsp;&nbsp; ${esc(fd.bizType)} &nbsp;&nbsp;/&nbsp;&nbsp; ${esc(fd.geo)}</div>
@@ -5059,7 +5254,7 @@ const scY = cy - R * Math.sin(angle);
     <div style="display:grid;grid-template-columns:repeat(${Math.min(compP.length,3)},1fr);gap:16px;margin-bottom:32px;">
       ${compP.slice(0,3).map((p,pi)=>{
         const rc3=(a.competitorRadar||[]).find(r=>r.name===p.name);
-        const pCol=['#1a56db','#bb00ff','#10b981'][pi];
+        const pCol=['#1a56db','#86198f','#10b981'][pi];
         const axes=['pricingPower','distribution','brandValue','innovation','marketReach','customerSat'];
         const axL=['Pricing','Distrib.','Brand','Innov.','Reach','Sat.'];
         return `<div style="background:#fff;border-radius:8px;border:1px solid rgba(17,68,160,0.12);overflow:hidden;box-shadow:0 1px 6px rgba(6,18,40,.05);">
@@ -5147,7 +5342,7 @@ const scY = cy - R * Math.sin(angle);
         ${[
           {c:'#059669',l:'Quick Wins'},
           {c:'#1144a0',l:'Customer Discovery'},
-          {c:'#bb00ff',l:'Research & Intel'},
+          {c:'#86198f',l:'Research & Intel'},
           {c:'#7c3aed',l:'Revenue Milestones'},
         ].map((leg,li)=>`<div style="display:flex;align-items:center;gap:7px;padding:10px 18px;${li>0?'border-left:1px solid rgba(17,68,160,0.06)':''};">
           <div style="width:12px;height:4px;border-radius:2px;background:${leg.c};"></div>
@@ -5162,7 +5357,7 @@ const scY = cy - R * Math.sin(angle);
         <div style="width:32px;height:32px;background:#061228;border-radius:6px;display:grid;place-items:center;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:11px;color:#fff;">IP</div>
         <div>
           <div style="font-size:12px;font-weight:700;color:#061228;letter-spacing:.01em;">Infopace Management Pvt Ltd</div>
-          <div style="font-size:9px;color:#94a3b8;margin-top:1px;">Market Intelligence Platform · AI-Powered Analysis</div>
+          <div style="font-size:9px;color:#94a3b8;margin-top:1px;">Market Potential Assessment · Offline Analysis</div>
         </div>
       </div>
       <div style="text-align:right;">
